@@ -525,13 +525,13 @@ shift_real K N {{lp:N + lp:K_as_real}}:-
 % of the form (F (n - k)).  The k values must be real-positive numbers.
 % The first argument is the depth of the recursion, The third argument
 % is the numeric variable used for recursion.
-pred eat_implications i:int, i:term, i:term, i:term, i:term, i:term, o:term.
+pred eat_implications i:int, i:term, i:term, i:term, o:term.
 
-eat_implications Order F VTy DefN N (prod _ _ G) R :-
+eat_implications Order F N (prod _ _ G) R :-
   %(pi x\ not(occurs x (G x))),
   (pi x y\ G x = G y), !,
   pi h \ 
-   eat_implications Order F VTy DefN N (G h) R.
+   eat_implications Order F  N (G h) R.
 
 eat_implications Order F N {{lp:F lp:N = lp:RHS}} RHS.
 
@@ -587,15 +587,12 @@ pred find_uses_of i:term, i:term, i:term, o:term, o:term.
 find_uses_of Ty F Spec Final Order_Z :-
   std.do! [
     collect_base_specs F Spec Sps,
-    coq.say "find uses of 1",
     alist_sort Sps Sps2,
     Ty = prod _ _Ty' (c0\ T2),
     make_initial_list T2 Sps2 ListSps,
     % coq.say "ListSps = " {coq.term->string ListSps},
-        coq.say "find uses of 2",
 
     fetch_recursive_equation Spec Ts,
-        coq.say "find uses of 3",
   type_to_nargs T2 Nargs,
   nargs_to_def_val Nargs DefN,
 % TODO : error reporting is not satisfactory here
@@ -617,7 +614,6 @@ pred make_eqn_proof i:Name, i:term, i:term, i:constant.
 
 make_eqn_proof N_id Abs_eqn  Order C :-
 std.do![
-  coq.say "hi" N_id,
   Abs_eqn = fun _ _ F,
   Statement = (F (global (const C))),
   Eqs_N_id is N_id ^ "_eqn",
@@ -634,15 +630,12 @@ make_eqn_proof _ _ _ _ :-
 
 main [trm (fun N Ty _ as Abs_eqn)] :-
 std.do! [
-  coq.say "main1",
   find_uses Abs_eqn Final Order,
   coq.term->string Final FinalS,
-  coq.say "main2" FinalS ,
   std.assert-ok! (coq.typecheck Final Ty) "Type error",
   coq.name->id N N_id,
   
   coq.env.add-const N_id Final Ty @transparent! C,
-  coq.say "Defined" N_id,
 
    make_eqn_proof N_id Abs_eqn Order C
 ].
@@ -654,44 +647,6 @@ main _L :-
 
 Elpi Typecheck.
 Elpi Export Recursive.
-Elpi Query lp:{{coq.say "a",
-A = [(pr 0 {{fun (n : R) => n}}), (pr 1 {{fun (n:R) => n+1}})],
-T = {{R -> R}},
-coq.say A,
-make_initial_list T A B,
- coq.typecheck B Ty Diag,
- coq.term->string B C
-}}.
-
-
-Elpi Query lp:{{find_uses {{fun bin : (R -> R -> R) => 
-bin 0 = (fun n : R => n) /\ 
-    forall n, Rnat (n-1) -> bin n = 
-    (fun m =>  (bin (n-1) (m-1)) + (bin (n-1) m)) }} A B
-
-}}. 
-
-Elpi Export Recursive.
-  
-Locate ty_R.
-
-Notation "'def' id 'such' 'that' bo" := (fun id => bo) 
- (id binder, bo at level 100, at level 1, only parsing).
- Definition Req_bool (x y :R) := if (Req_dec_T x y) then true else false.
-Notation "x =? y" := (Req_bool x y) : R_scope.
-Recursive (def bin such that 
-    bin 0 = (fun n : R => n) /\ 
-    forall n, Rnat (n-1) -> bin n = 
-    (fun m => if (m =? 0) then 1 else (bin (n-1)) (m-1) + (bin (n-1)) m)).
-
-Elpi Query lp:{{
-% coq.reduction.vm.norm {{ty_R 1}} _ V,
-% coq.term->string V VS,
-% coq.typecheck {{eq_refl : ty_R 1 = (R -> R)}} _ Diag,
-% coq.typecheck {{id_R 1}} {{(R -> R)}} Diag,
-coq.typecheck {{fun v : list (R -> R)=> @nth (ty_R 1) 0%nat v (id_R 1)}} A Diag
- }}.
-
 
 (* R_compute (bin 5 3). *)
 

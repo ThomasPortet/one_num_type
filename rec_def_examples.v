@@ -795,3 +795,10 @@ Recursive (def one_then_0 such that
    one_then_0 0 = 1 /\
    one_then_0 1 = 0 /\
    forall n, Rnat (n - 2) -> one_then_0 n = one_then_0 (n - 1)).
+
+Definition Req_bool (x y :R) := if (Req_dec_T x y) then true else false.
+Notation "x =? y" := (Req_bool x y) : R_scope.
+Recursive (def bin such that 
+    bin 0 = (fun n : R => n) /\ 
+    forall n, Rnat (n-1) -> bin n = 
+    (fun m => if (m =? 0) then 1 else (bin (n-1)) (m-1) + (bin (n-1)) m)).
