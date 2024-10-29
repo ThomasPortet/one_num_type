@@ -45,17 +45,17 @@ translate_prf (fun L {{list R}} F) (fun L {{list Z}} F1)
   (pi Cl1 Cl2 Hll \
     translate_prf Cl1 Cl2 Hll =>
     translate_prf (F Cl1) (F1 Cl2) (PF Cl1 Cl2 Hll)),
-    PF0 = {{fun (lr : list R) (lz : list Z)
-      (h : lr = @map Z R IZR lz :> list R) => lp:(PF lr lz h)}}.
+    PF0 = {{fun (lr : list (ty_R 0)) (lz : list Z)
+      (h : lr = @map Z R IZR lz :> list (ty_R 0)) => lp:(PF lr lz h)}}.
 
-translate_prf {{nth lp:K lp:L 0}} {{nth lp:K lp:Lz 0%Z}}
-  {{private.nth_map 0%Z 0 IZR lp:Lz lp:L lp:K eq_refl lp:H}} :-
+translate_prf {{nth lp:K lp:L (id_R 0)}} {{nth lp:K lp:Lz 0%Z}}
+  {{private.nth_map 0%Z (id_R 0) IZR lp:Lz lp:L lp:K eq_refl lp:H}} :-
   translate_prf L Lz H.
 
 translate_prf {{@nil R}} {{@nil Z}} {{eq_refl : nil = @map Z R IZR nil}}.
 
 translate_prf {{cons lp:A lp:L}} {{cons lp:A1 lp:L1}}
-  {{f_equal2 (@cons R) lp:Pfa lp:Pfl}}:-
+  {{f_equal2 (@cons (ty_R 0)) lp:Pfa lp:Pfl}}:-
   std.do! [
     translate_prf A A1 Pfa,
     translate_prf L L1 Pfl
@@ -165,7 +165,7 @@ translate_collect_prf (app [F, A, B]) (app [F1, A1, B1])
 pred abstract_markers i:list (pair int term) i:term i:term
    i:term o:term o:term.
 
-abstract_markers [] T LHS RHS T1 {{lp:LHS = lp:RHS :> R}} :-
+abstract_markers [] T LHS RHS T1 {{lp:LHS = lp:RHS :> (ty_R 0)}} :-
   copy T T1.
 
 abstract_markers [pr N Ty | L] T LHS RHS (fun _ Ty Prf) {{lp:Ty -> lp:T1TY}}:-
@@ -299,7 +299,7 @@ main_translate_prf1
 
 main_translate_prf
   {{fun (n : R) =>
-      nth 0 (Rnat_rec lp:L lp:Frstep0 n) 0}}
+      nth 0 (Rnat_rec lp:L lp:Frstep0 n) (id_R 0)}}
   F Prf1 :-
   Frstep0 = (fun _ {{R}} Frstep),
   Fnstep = (fun _ {{nat}} c \ (Frstep {{INR lp:c}})),

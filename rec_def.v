@@ -240,11 +240,46 @@ Ltac prove_recursive_specification T Order := unfold T;
         let Last_eqn := fresh "H" in
         enough (Last_eqn : INR (IRN (N - IZR Order)) + IZR Order = N)
             by (rewrite Last_eqn; reflexivity);
-            rewrite INR_IRN;[ring | assumption]))).
+            rewrite INR_IRN;[try ring | assumption]))).
 
+Fixpoint ty_R (n : nat) : Type := 
+  match n with
+   0 => R
+  | S p => (R -> ty_R p)
+  end.
+
+Fixpoint id_R (n : nat) : (ty_R n):= 
+  match n with
+   0 => 0%R
+  | S p => (fun k => (id_R p))
+  end.
+
+Fixpoint ty_Z (n : nat) : Type := 
+  match n with
+   0 => Z
+  | S p => (Z -> ty_Z p)
+  end.
+
+Fixpoint id_Z (n : nat) : (ty_Z n):= 
+  match n with
+   0 => 0%Z
+  | S p => (fun k => (id_Z p))
+  end.
 Elpi Command Recursive.
 
 Elpi Accumulate lp:{{
+
+pred type_to_nargs i:term, o:int.
+
+type_to_nargs (prod _ _ c\T) N1 :-
+  !, type_to_nargs T N, N1 is N + 1.
+
+type_to_nargs {{R}} 0.
+
+pred nargs_to_def_val i:int, o:term.
+
+nargs_to_def_val N {{id_R lp:NasNat}} :-
+int_to_nat N NasNat.
 
 % sorting a list of integers removing duplicates
 pred list_insert i:int, i:list int, o:list int.
@@ -367,6 +402,24 @@ choose_pos_constructor.aux 0 {{xO}} :- !.
 choose_pos_constructor.aux _ _ :-
   coq.error "choose_pos_constructor.aux only accepts 0 or 1 as input".
 
+
+pred replace_rec_call_by_seq_nth i:term, i:term, i:int, i:term, i:term, i:term ,i:term,
+  o:term.
+
+% replace (F (N - k)) by (nth (L - k) V 0) everywhere in term A
+% But the subtraction (L - k) is actually computed and a number of type nat,
+% while (N - k) is a term representing a subtraction, where k is a
+% positive integer constant of type R
+
+replace_rec_call_by_seq_nth VTy Def L F N V A B :-
+  std.do! [
+    A = app[F, app [{{Rminus}}, N, K]|Args ] ,
+    real_to_int K Kn,
+    In is L - Kn,
+    int_to_nat In I,
+    B = app[{{@nth}}, VTy, I, V, Def|Args]
+  ].
+
 pred make_one_spec i:term, i:term, o:pair int term.
 make_one_spec V1 V2 (pr I1 V2) :-
   real_to_int V1 I1,!.
@@ -429,29 +482,30 @@ check_all_present N [pr N _ | L] N2 :-
 check_all_present N [pr _ _ | _] _ :-
   coq.error "missing value for" N.
 
-pred make_initial_list i:list (pair int term), o:term.
 
-make_initial_list [] {{ @nil R}}.
+pred make_initial_list i:term, i:list (pair int term), o:term.
 
-make_initial_list [pr _ V | L] (app [{{ @cons R}}, V, Tl]) :-
-  make_initial_list L Tl.
+make_initial_list T [] {{ @nil lp:T}}.
 
-pred make_recursive_step_list i:(term -> term), i:int, i:int,
+make_initial_list T [(pr  _ V) | L] (app [{{ @cons lp:T}}, V, Tl]) :-
+  make_initial_list T L Tl, std.assert-ok! (coq.typecheck Tl _) "constructed a bad initial list".
+
+pred make_recursive_step_list i:term, i:term, i:(term -> term), i:int, i:int,
    o:(term -> term).
 
-make_recursive_step_list Func 0 _Rank R :-
+make_recursive_step_list Ty _ZTy Func 0 _Rank R :-
   pi V\
-   app [{{ cons}}, (Func V), {{ nil }}] = R V.
+   app [{{ @cons }}, Ty, (Func V), {{ @nil lp:Ty}}] = R V.
 
-make_recursive_step_list Func N Rank R :-
+make_recursive_step_list Ty ZTy Func N Rank R :-
   std.do! [
     0 < N,
     N1 is N - 1,
     Rank1 is Rank + 1,
     int_to_nat Rank1 RankTerm,
-    make_recursive_step_list Func N1 Rank1 Func',
+    make_recursive_step_list Ty ZTy Func N1 Rank1 Func',
     pi V \
-      app [{{ cons}}, app [{{ nth}}, {{R}}, RankTerm, V, {{ 0}}],
+      app [{{ @cons}}, Ty, app [ {{ @nth}}, Ty, RankTerm, V, ZTy],
            Func' V] = R V
   ].
 
@@ -471,13 +525,13 @@ shift_real K N {{lp:N + lp:K_as_real}}:-
 % of the form (F (n - k)).  The k values must be real-positive numbers.
 % The first argument is the depth of the recursion, The third argument
 % is the numeric variable used for recursion.
-pred eat_implications i:int, i:term, i:term, i:term, o:term.
+pred eat_implications i:int, i:term, i:term, i:term, i:term, i:term, o:term.
 
-eat_implications Order F N (prod _ _ G) R :-
+eat_implications Order F VTy DefN N (prod _ _ G) R :-
   %(pi x\ not(occurs x (G x))),
   (pi x y\ G x = G y), !,
   pi h \ 
-   eat_implications Order F N (G h) R.
+   eat_implications Order F VTy DefN N (G h) R.
 
 eat_implications Order F N {{lp:F lp:N = lp:RHS}} RHS.
 
@@ -523,21 +577,27 @@ pred find_uses i:term, o:term, o:term.
 find_uses (fun N Ty Bo) R Order_Z :-
   pi arg\
     decl arg N Ty => % let one call the pretty printer and type checker inside
-    find_uses_of arg (Bo arg) R Order_Z. 
+    find_uses_of Ty arg (Bo arg) R Order_Z. 
                               % R does not use f recursively, but rather
                               % the value of its recursion history at depth
                               % Order_Z (which must be a cic term of type Z)
 
-pred find_uses_of i:term, i:term, o:term, o:term.
+pred find_uses_of i:term, i:term, i:term, o:term, o:term.
 
-find_uses_of F Spec Final Order_Z :-
+find_uses_of Ty F Spec Final Order_Z :-
   std.do! [
     collect_base_specs F Spec Sps,
+    coq.say "find uses of 1",
     alist_sort Sps Sps2,
-    check_all_present 0 Sps2 Order,
-    make_initial_list Sps2 ListSps,
+    Ty = prod _ _Ty' (c0\ T2),
+    make_initial_list T2 Sps2 ListSps,
     % coq.say "ListSps = " {coq.term->string ListSps},
+        coq.say "find uses of 2",
+
     fetch_recursive_equation Spec Ts,
+        coq.say "find uses of 3",
+  type_to_nargs T2 Nargs,
+  nargs_to_def_val Nargs DefN,
 % TODO : error reporting is not satisfactory here
     std.assert! (Ts = [prod Scalar_name Sc_type F1])
        "Expecting exactly one recursive equation",
@@ -546,16 +606,18 @@ find_uses_of F Spec Final Order_Z :-
       (eat_implications Order F n (F1 n) (Body n),
       translate_recursive_body Order F n (Body n) (Main_expression n))),
     %Final = {{Rnat_rec lp:ListSps (fun x : R => lp:(Main_expression x)) }},
-    Final = {{ fun r : R => nth 0 
-                (Rnat_rec lp:ListSps lp:{{ fun Scalar_name {{R}}
-                              Main_expression}} r) 0}},
+    Final = {{ fun r : R => @nth lp:T2 0 
+                (@Rnat_rec (list lp:T2) lp:ListSps lp:{{ fun Scalar_name {{R}}
+                              Main_expression}} r) lp:DefN}},
     int_to_Z Order Order_Z
   ].
+
 
 pred make_eqn_proof i:Name, i:term, i:term, i:constant.
 
 make_eqn_proof N_id Abs_eqn  Order C :-
 std.do![
+  coq.say "hi" N_id,
   Abs_eqn = fun _ _ F,
   Statement = (F (global (const C))),
   Eqs_N_id is N_id ^ "_eqn",
@@ -572,14 +634,17 @@ make_eqn_proof _ _ _ _ :-
 
 main [trm (fun N Ty _ as Abs_eqn)] :-
 std.do! [
+  coq.say "main1",
   find_uses Abs_eqn Final Order,
+  coq.term->string Final FinalS,
+  coq.say "main2" FinalS ,
   std.assert-ok! (coq.typecheck Final Ty) "Type error",
   coq.name->id N N_id,
   
   coq.env.add-const N_id Final Ty @transparent! C,
   coq.say "Defined" N_id,
 
-  make_eqn_proof N_id Abs_eqn Order C
+   make_eqn_proof N_id Abs_eqn Order C
 ].
 
 main _L :-
@@ -588,11 +653,47 @@ main _L :-
 }}.
 
 Elpi Typecheck.
+Elpi Export Recursive.
+Elpi Query lp:{{coq.say "a",
+A = [(pr 0 {{fun (n : R) => n}}), (pr 1 {{fun (n:R) => n+1}})],
+T = {{R -> R}},
+coq.say A,
+make_initial_list T A B,
+ coq.typecheck B Ty Diag,
+ coq.term->string B C
+}}.
+
+
+Elpi Query lp:{{find_uses {{fun bin : (R -> R -> R) => 
+bin 0 = (fun n : R => n) /\ 
+    forall n, Rnat (n-1) -> bin n = 
+    (fun m =>  (bin (n-1) (m-1)) + (bin (n-1) m)) }} A B
+
+}}. 
 
 Elpi Export Recursive.
+  
+Locate ty_R.
 
 Notation "'def' id 'such' 'that' bo" := (fun id => bo) 
  (id binder, bo at level 100, at level 1, only parsing).
+ Definition Req_bool (x y :R) := if (Req_dec_T x y) then true else false.
+Notation "x =? y" := (Req_bool x y) : R_scope.
+Recursive (def bin such that 
+    bin 0 = (fun n : R => n) /\ 
+    forall n, Rnat (n-1) -> bin n = 
+    (fun m => if (m =? 0) then 1 else (bin (n-1)) (m-1) + (bin (n-1)) m)).
+
+Elpi Query lp:{{
+% coq.reduction.vm.norm {{ty_R 1}} _ V,
+% coq.term->string V VS,
+% coq.typecheck {{eq_refl : ty_R 1 = (R -> R)}} _ Diag,
+% coq.typecheck {{id_R 1}} {{(R -> R)}} Diag,
+coq.typecheck {{fun v : list (R -> R)=> @nth (ty_R 1) 0%nat v (id_R 1)}} A Diag
+ }}.
+
+
+(* R_compute (bin 5 3). *)
 
 Ltac rec_Rnat fun_name :=
 (* This tactic is only meant to be used on statements of the form:
