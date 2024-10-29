@@ -240,8 +240,7 @@ Ltac prove_recursive_specification T Order := unfold T;
         let Last_eqn := fresh "H" in
         enough (Last_eqn : INR (IRN (N - IZR Order)) + IZR Order = N)
             by (rewrite Last_eqn; reflexivity);
-            rewrite INR_IRN;[try ring | assumption]))).
-
+            rewrite INR_IRN;[ring | assumption]))).
 Fixpoint ty_R (n : nat) : Type := 
   match n with
    0 => R
@@ -535,32 +534,33 @@ eat_implications Order F N (prod _ _ G) R :-
 
 eat_implications Order F N {{lp:F lp:N = lp:RHS}} RHS.
 
-pred translate_recursive_body i:int i:term, i:term, i:term, o:term.
+pred translate_recursive_body i:int, i:term, i:term, i:term, i:term, i:term, o:term.
 
-translate_recursive_body Order F N RHS R :-
-  std.do! [
-    % This should recognize (f (n - k)) and store k in the list
-    (pi A E Op V\
-      fold-map {{lp:F (lp:V - lp:E)}} A
-      {{lp:F (lp:V - lp:E)}} [E | A])
-        =>
-      fold-map RHS [] _ Uses,
-    std.map Uses (real_to_int) Uses_int,
-    list_max Uses_int MaxUses,
-    % Need to generate an abstraction that gives the name L to
-    % the result of the recursive call
-    std.assert! (MaxUses =< Order)
-    "The depth of recursive calls exceeds the number of base values",
-    shift_real Order N N_plus_Order,
-    % Now performing the replacement for both the recursive calls
-    % and the numeric value received as argument
-    (pi L \
-      ((pi I I' In In' \ copy {{lp:F (lp:N - lp:I)}}
-         {{nth lp:I' lp:L 0}} :-
-         !,
-          real_to_int I In,
-          In' is Order - In,
-          int_to_nat In' I'),
+translate_recursive_body Order F VTy DefN N RHS R :-
+
+std.do! [
+    %$  G = {{_ = lp:RHS}}
+  G = app [_, _, _, RHS],
+      % This should recognize (f (n - k)) and store k in the list
+  (pi A E Op V Args\
+         %         fold-map (app [F, app[Op, V, E]]) A
+                  %                 (app [F, app[Op, V, E]]) [E | A]
+    fold-map (app [F, app[Op, V, E]|Args]) A
+    (app [F, app[Op, V, E]|Args])[E | A])
+  =>
+    fold-map RHS [] _ Uses,
+  std.map Uses (real_to_int) Uses_int,
+  list_sort Uses_int Srt_uses,
+% TODO: just take the last element, or avoid sorting
+  list_max Srt_uses L,
+% Need to generate an abstraction that gives the name V to
+% the result of the recursive call
+  std.assert! (L = Order)
+  "The number of base values does not match the depth of recursive calls",
+  shift_real Order N N_plus_Order,
+     (pi V \
+      ((pi A B \ copy A B :-
+         replace_rec_call_by_seq_nth VTy DefN L F N V A B),
        copy N N_plus_Order) =>
     copy RHS (RHS' L)),
     Order1 is Order - 1,
@@ -587,12 +587,15 @@ pred find_uses_of i:term, i:term, i:term, o:term, o:term.
 find_uses_of Ty F Spec Final Order_Z :-
   std.do! [
     collect_base_specs F Spec Sps,
+    coq.say "find uses of 1",
     alist_sort Sps Sps2,
     Ty = prod _ _Ty' (c0\ T2),
     make_initial_list T2 Sps2 ListSps,
     % coq.say "ListSps = " {coq.term->string ListSps},
+        coq.say "find uses of 2",
 
     fetch_recursive_equation Spec Ts,
+        coq.say "find uses of 3",
   type_to_nargs T2 Nargs,
   nargs_to_def_val Nargs DefN,
 % TODO : error reporting is not satisfactory here
@@ -601,7 +604,7 @@ find_uses_of Ty F Spec Final Order_Z :-
     (pi n\
       decl n Scalar_name Sc_type =>
       (eat_implications Order F n (F1 n) (Body n),
-      translate_recursive_body Order F n (Body n) (Main_expression n))),
+      translate_recursive_body Order F T2 DefN n (Body n) (Main_expression n))),
     %Final = {{Rnat_rec lp:ListSps (fun x : R => lp:(Main_expression x)) }},
     Final = {{ fun r : R => @nth lp:T2 0 
                 (@Rnat_rec (list lp:T2) lp:ListSps lp:{{ fun Scalar_name {{R}}
@@ -614,6 +617,7 @@ pred make_eqn_proof i:Name, i:term, i:term, i:constant.
 
 make_eqn_proof N_id Abs_eqn  Order C :-
 std.do![
+  coq.say "hi" N_id,
   Abs_eqn = fun _ _ F,
   Statement = (F (global (const C))),
   Eqs_N_id is N_id ^ "_eqn",
@@ -630,12 +634,15 @@ make_eqn_proof _ _ _ _ :-
 
 main [trm (fun N Ty _ as Abs_eqn)] :-
 std.do! [
+  coq.say "main1",
   find_uses Abs_eqn Final Order,
   coq.term->string Final FinalS,
+  coq.say "main2" FinalS ,
   std.assert-ok! (coq.typecheck Final Ty) "Type error",
   coq.name->id N N_id,
   
   coq.env.add-const N_id Final Ty @transparent! C,
+  coq.say "Defined" N_id,
 
    make_eqn_proof N_id Abs_eqn Order C
 ].
@@ -648,7 +655,11 @@ main _L :-
 Elpi Typecheck.
 Elpi Export Recursive.
 
-(* R_compute (bin 5 3). *)
+  
+
+Notation "'def' id 'such' 'that' bo" := (fun id => bo) 
+ (id binder, bo at level 100, at level 1, only parsing).
+
 
 Ltac rec_Rnat fun_name :=
 (* This tactic is only meant to be used on statements of the form:
@@ -672,5 +683,7 @@ Ltac rec_Rnat fun_name :=
              intros [ | k];[typeclasses eauto | revert k; cbn [nth]]
     )) | assumption].
 
+
+Fail Elpi mirror_recursive_definition bin.
 
 (* Elpi Trace Browser. *)
