@@ -539,7 +539,6 @@ pred translate_recursive_body i:int, i:term, i:term, i:term, i:term, i:term, o:t
 translate_recursive_body Order F VTy DefN N RHS R :-
 
 std.do! [
-    %$  G = {{_ = lp:RHS}}
       % This should recognize (f (n - k)) and store k in the list
   (pi A E Op V Args\
          %         fold-map (app [F, app[Op, V, E]]) A
@@ -553,7 +552,6 @@ std.do! [
   list_max Uses_int MaxUses,
 % Need to generate an abstraction that gives the name V to
 % the result of the recursive call
-coq.say MaxUses Order,
   std.assert! (MaxUses =< Order)
   "The number of base values does not match the depth of recursive calls",
   shift_real Order N N_plus_Order,
@@ -586,19 +584,14 @@ pred find_uses_of i:term, i:term, i:term, o:term, o:term.
 find_uses_of Ty F Spec Final Order_Z :-
   std.do! [
     collect_base_specs F Spec Sps,
-    coq.say "find uses of 1",
     alist_sort Sps Sps2,
     Ty = prod _ _Ty' (c0\ T2),
     check_all_present 0 Sps2 Order,
     make_initial_list T2 Sps2 ListSps,
-    % coq.say "ListSps = " {coq.term->string ListSps},
-        coq.say "find uses of 2",
-
     fetch_recursive_equation Spec Ts,
-        coq.say "find uses of 3",
+
   type_to_nargs T2 Nargs,
   nargs_to_def_val Nargs DefN,
-  coq.say "find uses of 3",
 % TODO : error reporting is not satisfactory here
     std.assert! (Ts = [prod Scalar_name Sc_type F1])
        "Expecting exactly one recursive equation",
@@ -618,7 +611,6 @@ pred make_eqn_proof i:Name, i:term, i:term, i:constant.
 
 make_eqn_proof N_id Abs_eqn  Order C :-
 std.do![
-  coq.say "hi" N_id,
   Abs_eqn = fun _ _ F,
   Statement = (F (global (const C))),
   Eqs_N_id is N_id ^ "_eqn",
@@ -635,10 +627,8 @@ make_eqn_proof _ _ _ _ :-
 
 main [trm (fun N Ty _ as Abs_eqn)] :-
 std.do! [
-  coq.say "main1",
   find_uses Abs_eqn Final Order,
   coq.term->string Final FinalS,
-  coq.say "main2" FinalS ,
   std.assert-ok! (coq.typecheck Final Ty) "Type error",
   coq.name->id N N_id,
   
