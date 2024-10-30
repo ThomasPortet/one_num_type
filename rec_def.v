@@ -524,15 +524,15 @@ shift_real K N {{lp:N + lp:K_as_real}}:-
 % of the form (F (n - k)).  The k values must be real-positive numbers.
 % The first argument is the depth of the recursion, The third argument
 % is the numeric variable used for recursion.
-pred eat_implications i:int, i:term, i:term, i:term, o:term.
+pred eat_implications i:term, i:term, i:term, o:term.
 
-eat_implications Order F N (prod _ _ G) R :-
+eat_implications F N (prod _ _ G) R :-
   %(pi x\ not(occurs x (G x))),
   (pi x y\ G x = G y), !,
   pi h \ 
-   eat_implications Order F  N (G h) R.
+   eat_implications F N (G h) R.
 
-eat_implications Order F N {{lp:F lp:N = lp:RHS}} RHS.
+eat_implications F N {{lp:F lp:N = lp:RHS}} RHS.
 
 pred translate_recursive_body i:int, i:term, i:term, i:term, i:term, i:term, o:term.
 
@@ -597,7 +597,7 @@ find_uses_of Ty F Spec Final Order_Z :-
        "Expecting exactly one recursive equation",
     (pi n\
       decl n Scalar_name Sc_type =>
-      (eat_implications Order F n (F1 n) (Body n),
+      (eat_implications F n (F1 n) (Body n),
       translate_recursive_body Order F T2 DefN n (Body n) (Main_expression n))),
     %Final = {{Rnat_rec lp:ListSps (fun x : R => lp:(Main_expression x)) }},
     Final = {{ fun r : R => @nth lp:T2 0 
@@ -628,7 +628,6 @@ make_eqn_proof _ _ _ _ :-
 main [trm (fun N Ty _ as Abs_eqn)] :-
 std.do! [
   find_uses Abs_eqn Final Order,
-  coq.term->string Final FinalS,
   std.assert-ok! (coq.typecheck Final Ty) "Type error",
   coq.name->id N N_id,
   
