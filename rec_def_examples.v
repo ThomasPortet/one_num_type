@@ -285,15 +285,6 @@ unfold huge_val.
 reflexivity.
 Qed.
 
-Notation "x =? y" := (Req_bool x y) : R_scope.
-Recursive (def bin such that 
-    bin 0 = (fun n : R => if (n =? 0)then 1 else 0) /\ 
-    forall n, Rnat (n-1) -> bin n = 
-    (fun m => if (m =? 0) then 1 else (bin (n-1)) (m-1) + (bin (n-1)) m)).
-Check (bin 2 1).
-Check bin_eqn.
-Fail Elpi mirror_recursive_definition bin.
-
 Definition k_among_n (k n : R) :=
   factorial n / ((factorial k) * factorial (n - k)).
 
@@ -799,6 +790,8 @@ Recursive (def one_then_0 such that
 Definition Req_bool (x y :R) := if (Req_dec_T x y) then true else false.
 Notation "x =? y" := (Req_bool x y) : R_scope.
 Recursive (def bin such that 
-    bin 0 = (fun n : R => n) /\ 
+    bin 0 = (fun m => if m =?0 then 1 else 0) /\ 
     forall n, Rnat (n-1) -> bin n = 
     (fun m => if (m =? 0) then 1 else (bin (n-1)) (m-1) + (bin (n-1)) m)).
+Check bin_eqn.
+Fail Elpi mirror_recursive_definition bin.

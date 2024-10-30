@@ -540,7 +540,6 @@ translate_recursive_body Order F VTy DefN N RHS R :-
 
 std.do! [
     %$  G = {{_ = lp:RHS}}
-  G = app [_, _, _, RHS],
       % This should recognize (f (n - k)) and store k in the list
   (pi A E Op V Args\
          %         fold-map (app [F, app[Op, V, E]]) A
@@ -550,22 +549,22 @@ std.do! [
   =>
     fold-map RHS [] _ Uses,
   std.map Uses (real_to_int) Uses_int,
-  list_sort Uses_int Srt_uses,
 % TODO: just take the last element, or avoid sorting
-  list_max Srt_uses L,
+  list_max Uses_int MaxUses,
 % Need to generate an abstraction that gives the name V to
 % the result of the recursive call
-  std.assert! (L = Order)
+coq.say MaxUses Order,
+  std.assert! (MaxUses =< Order)
   "The number of base values does not match the depth of recursive calls",
   shift_real Order N N_plus_Order,
-     (pi V \
+     (pi L \
       ((pi A B \ copy A B :-
-         replace_rec_call_by_seq_nth VTy DefN L F N V A B),
+         replace_rec_call_by_seq_nth VTy DefN MaxUses F N L A B),
        copy N N_plus_Order) =>
     copy RHS (RHS' L)),
     Order1 is Order - 1,
-    make_recursive_step_list RHS' Order1 0 RecList,
-    R = (fun `v` {{list R}} RecList)
+    make_recursive_step_list VTy DefN RHS' Order1 0 RecList,
+    R = (fun `v` {{list lp:VTy}} RecList)
 ].
 
 % The input must have the form:
@@ -590,6 +589,7 @@ find_uses_of Ty F Spec Final Order_Z :-
     coq.say "find uses of 1",
     alist_sort Sps Sps2,
     Ty = prod _ _Ty' (c0\ T2),
+    check_all_present 0 Sps2 Order,
     make_initial_list T2 Sps2 ListSps,
     % coq.say "ListSps = " {coq.term->string ListSps},
         coq.say "find uses of 2",
@@ -598,6 +598,7 @@ find_uses_of Ty F Spec Final Order_Z :-
         coq.say "find uses of 3",
   type_to_nargs T2 Nargs,
   nargs_to_def_val Nargs DefN,
+  coq.say "find uses of 3",
 % TODO : error reporting is not satisfactory here
     std.assert! (Ts = [prod Scalar_name Sc_type F1])
        "Expecting exactly one recursive equation",
@@ -684,6 +685,5 @@ Ltac rec_Rnat fun_name :=
     )) | assumption].
 
 
-Fail Elpi mirror_recursive_definition bin.
 
 (* Elpi Trace Browser. *)
