@@ -630,7 +630,6 @@ make_eqn_proof _ _ _ _ :-
 main [trm (fun N Ty _ as Abs_eqn)] :-
 std.do! [
   find_uses Abs_eqn Final Order,
-  coq.term->string Final FinalS,
   std.assert-ok! (coq.typecheck Final Ty) "Type error",
   coq.name->id N N_id,
   
