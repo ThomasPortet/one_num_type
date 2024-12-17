@@ -301,15 +301,84 @@ Fixpoint id_Z (n : nat) : (ty_Z n):=
   end.
 
 
-Definition P_trans1 (l : list (R -> R)) (f : Z->R) (l' : list (Z->Z)) :=
+Definition P_trans1 (l : list (R -> R)) (f : Z -> R) (l' : list (Z->Z)) :=
 forall i : nat, forall x : Z, nth i l (id_R 1) (f x) = f (nth i l' (id_Z 1) x).
 
+Definition P_trans1' (l : list (R -> R)) (f : Z->R) (l' : list (Z->Z)) :=
+forall (i : nat) (x : Z) (y : R), y = (f x) -> nth i l (id_R 1) y = f (nth i l' (id_Z 1) x).
+
+Lemma trf_trans : forall l f l', P_trans1 l f l' -> P_trans1' l f l'.
+Proof.
+  intros l f l'.
+  unfold P_trans1.
+  unfold P_trans1'.
+  intros H i x y xy.
+  rewrite xy.
+  apply H.
+Qed.
+
+Lemma trf_trans_rev : forall l f l', P_trans1 l f l' <-> P_trans1' l f l'.
+Proof.
+  intros l f l'.
+  unfold P_trans1.
+  unfold P_trans1'.
+  split.
+  intros H i x y xy.
+  rewrite xy.
+  apply H.
+  intros H i x.
+  apply H.
+  reflexivity.
+Qed.
+
+Lemma fun1_trf (g : R -> R) (g' : Z -> Z) (f : Z -> R) : 
+(forall x, g (f x) = f (g' x)) <-> (forall x y, x = (f y) -> (g x) = f (g' y)).
+Proof.
+  split.
+    intros H x y xy.
+    rewrite xy.
+  apply H.
+  intros H x.
+  apply H.
+  reflexivity.
+Qed.
+
+
+Lemma P_trans1_nil :  P_trans1 nil IZR nil.
+unfold P_trans1.
+destruct i as [|i].
+intros.
+reflexivity.
+intros.
+reflexivity.
+Qed.
+
+Lemma P_trans1_cons A A' B B': (forall x, A (IZR x) = IZR (A' x)) -> P_trans1 B IZR B' -> P_trans1 (cons A B) IZR (cons A' B').
+Proof.
+  unfold P_trans1.
+  intros Aeq PtB i z.
+  case i.
+    now simpl.
+  simpl.
+  intro n.
+  apply PtB.
+Qed.
+
+
+
+Lemma nth_overflow_1 A A' p x : nth (S p) (A::nil) (id_R 1) (IZR x) = IZR (nth (S p) (A'::nil) (id_Z 1) x).
+case p.
+reflexivity.
+reflexivity.
+Qed.
+
+(* Lemma prf_if a az b bz c cz : a = IZR A ->  *)
 
 Lemma nat_rect_list :
   forall (l0 : list (Z->Z)) (l' : list (R->R))
     (f : nat -> list (Z->Z) -> list (Z->Z))
     (f' : nat -> list (R->R) -> list (R->R))
-    (n:nat),
+    (n : nat),
     P_trans1 l' IZR l0 ->
     (forall n lr lz, P_trans1 lr IZR lz -> 
         P_trans1 (f' n lr) IZR (f n lz)) ->
