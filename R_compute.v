@@ -190,6 +190,14 @@ translate_collect_prf {{lp:F (IZR (Zpos lp:P))}}
   {{lp:Fz (Zpos lp:P)}}
   {{private.cancel_Rabs_pos lp:F lp:Fz lp:Prf lp:P}} [] :-
   nat_thm_table F Fz Prf.
+  
+translate_collect_prf {{lp:F (IZR (Zpos lp:P)) lp:R}}
+  {{lp:Fz (Zpos lp:P) lp:Z}}
+  {{private.cancel_Rabs_pos2 lp:F lp:Fz lp:Prf lp:P lp:R lp:Z lp:PrfRZ}} [] :-
+  coq.typecheck {{lp:F}} {{R->R->R}} ok,
+  translate_collect_prf R Z PrfRZ _L,
+  nat_thm_table F Fz Prf.
+
 
 translate_prf (app [F, {{lp:F (IZR 0%Z)}}])
   {{lp:Fz 0%Z}}
@@ -220,6 +228,7 @@ type marker int -> term.
 translate_collect_prf (app [F, A]) (app [F1, A1])
   {{private.Rnat_Rabs lp:PFF1 lp:A lp:A1 lp:Nat_prf lp:PRFA}} L' :-
   std.do![
+    
     nat_thm_table F F1 PFF1,
     translate_collect_prf A A1 PRFA L,
     coq.typecheck Hole {{Rnat lp:A}} ok,
@@ -371,6 +380,7 @@ main [trm E, str THM_name] :-
     std.do! [
       translate_collect_prf E E1 PRF OBLS,
       coq.reduction.vm.norm E1 _ E2,
+      coq.say "E2" {coq.term->string E2},
       E3 = {{IZR lp:E2}},
       abstract_markers OBLS PRF E E3 PRF1 Stmt,
       coq.say " =" {coq.term->string E3},
@@ -419,24 +429,10 @@ prf_stmt Ty _ _ _ :- coq.say Ty, fail.
 prf_stmt {{Z->Z}} Ft FG {{forall (n:R) z, n = IZR z ->
           lp:FG (Rabs n) = IZR (lp:Ft z)}}.
 
-% prf_stmt {{Z->Z->Z}} Ft FG 
-%           {{forall (r : R) (z : Z), r = IZR z -> fun x :Z =>
-%           (nth 0 ((lp:FG (Rabs r))::nil) (id_R 1)) (IZR x) = IZR (
-%           (nth 0 ((lp:Ft z)::nil) (id_Z 1)) x) }}
-%         .
-% prf_stmt {{Z->Z->Z}} Ft FG 
-%           {{forall (r : R) (z x : Z), r = IZR z -> 
-%           (nth 0 ((lp:FG (Rabs r))::nil) (id_R 1)) (IZR x) = IZR (
-%           (nth 0 ((lp:Ft z)::nil) (id_Z 1)) x) }}
-%         .
-
 prf_stmt {{Z->Z->Z}} Ft FG 
-          {{forall (r :R) (z:Z), r = IZR z -> 
-          forall (i :nat) (x :Z),
-          (nth i (lp:FG (Rabs r))(id_R 1)  (IZR x) ) r =
-          (nth i (lp:Ft z) (id_Z 1) x) z }}
-        .
-
+          {{forall (r : R) (z : Z), r = IZR z ->  forall (a : R) (b : Z) , a = IZR b ->
+          (lp:FG (Rabs r)) a = IZR ((lp:Ft z) b) }}.
+          
 pred translate_list_prf i:list term, o:list term, o:list term.
 pred main_translate_prf1 i:term, i:term, o:term, o:term, o:term.
 
@@ -508,15 +504,20 @@ main_translate_prf
            lp:Fz (Z.abs_nat x)) (id_Z 1)}},
   std.assert-ok! (coq.typecheck F {{Z->Z->Z}})
     "failed to typecheck mirror function",
-  Prf1 = 
-    {{fun (r : R) (z : Z) (nzq : r = IZR z) =>
-       eq_ind_r
-         (fun x : nat =>
 
+  Prf1 = 
+    {{
+      fun (r : R) (z : Z) (nzq : r = IZR z) =>
+      private.IZR_map1'  (
+       (eq_ind_r 
+         (fun x : nat =>
           P_trans1 
-          (nat_rect _ lp:L lp:Fnstep x) IZR (nat_rect _ lp:Lz lp:Fz (Z.abs_nat z)))
+          (nat_rect _ lp:L lp:Fnstep x) IZR 
+          (nat_rect _ lp:Lz lp:Fz (Z.abs_nat z))
+          )
         (lp:Prf r z)
-          (private.IRN_Z_abs_nat _ _ nzq)}}.
+          (private.IRN_Z_abs_nat _ _ nzq)) 0%nat)
+          }}.
 
 
 main [str F] :-
@@ -537,19 +538,7 @@ std.do! [
   F_mirror is F ^ "_Z_mirror",
   coq.env.add-const F_mirror T1 Ty @transparent! C,
   Fterm = global (const C),
-  coq.term->string T1 TS,
-  coq.say "Ftermmirr" Fterm TS,
-  coq.term->string Bo BoS,
-  coq.say "Bos" BoS,
-    coq.term->string  {{fun n : nat => lp:Bo (Rabs n)}} S,
-  coq.say "FGR bo" FGR S,
   prf_stmt Ty Fterm (global (const FGR)) Stmt,
-   RF = coq.redflags.const FGR,
-   RF' = coq.redflags.const C,
-   coq.redflags.add coq.redflags.nored [RF,RF'] RFS,
-   @redflags! RFS => coq.reduction.cbv.norm Stmt StmtLN,
-  
-  coq.say "stmtln" {coq.term->string StmtLN},
   std.assert-ok! (coq.typecheck Prf Stmt)
           "Anomaly: generating an incorrect proof",
   F_prf is F ^ "_Z_prf",
@@ -567,8 +556,7 @@ main L :-
 Elpi Typecheck.
 Recursive (def foo such that 
     foo 0 = (fun m => 0) /\ 
-    forall n, Rnat (n-1) -> foo n = 
-    fun m =>  (foo (n-1)) m).
+    forall n, Rnat (n-1) -> foo n = fun m => (foo (n-1)) m).
     Print foo.
     Print foo_eqn.
 Elpi Query lp:{{
@@ -579,18 +567,59 @@ Elpi Query lp:{{
   coq.typecheck T1 Ty ok,
   coq.env.add-const "foo_m" T1 Ty @transparent! C,
   Fterm = global (const C),
-  prf_stmt Ty Fterm (global (const FGR)) Stmt,
+  % prf_stmt Ty Fterm (global (const FGR)) Stmt,
+  % Stmt = {{forall (r : R) (z : Z), r=IZR z -> forall (a :R) (b : Z) , a = IZR b -> foo (Rabs r) a = IZR (lp:Fterm (z) b)}},
   RF = coq.redflags.const FGR,
-   RF' = coq.redflags.const C,
+  RF' = coq.redflags.const C,
    coq.redflags.add coq.redflags.nored [RF,RF'] RFS,
    @redflags! RFS => coq.reduction.cbv.norm Stmt StmtLN,
-   
+
   coq.say "Stmt is " {coq.term->string StmtLN},
-  std.assert-ok! (coq.typecheck Prf Stmt )
-          "Anomaly: generating an incorrect proof"
+  std.assert-ok! (coq.typecheck {{lp:Prf}} Stmt )
+          "Anomaly: generating an incorrect proof",
+coq.say "DEBUG TY2" {coq.term->string Stmt}
 
 }}.
+Elpi mirror_recursive_definition foo.
+Check foo_Z_prf.
+R_compute (foo  5 2).
 
+Parameter toto : forall (r : R) (z : Z),
+r = IZR z ->
+(fun x : nat =>
+ P_trans1
+   (nat_rect (fun _ : nat => list (R -> R)) ((fun _ : R => 0) :: nil)
+      (fun (_ : nat) (v : list (R -> R)) =>
+       (fun m : R => nth 0 v (id_R 1) m) :: nil) x) IZR
+   (nat_rect (fun _ : nat => list (Z -> Z)) ((fun _ : Z => 0%Z) :: nil)
+      (fun (_ : nat) (v : list (Z -> Z)) =>
+       (fun m : Z => nth 0 v (id_Z 1) m) :: nil) (Z.abs_nat z))) (IRN (Rabs r)).
+ Check ( eq_refl :
+nth 0
+(nat_rect (fun _ : nat => list (R -> R))
+((fun _ : R => 0) :: nil)
+(fun (_ : nat) (v : list (R -> R)) =>
+(fun m : R => nth 0 v (id_R 1) m) :: nil)
+(IRN (Rabs 1))) (id_R 1) = (foo (Rabs 1))
+). 
+
+Recursive (def fib such that 
+    fib 0 = 0 /\ 
+    fib 1 = 1 /\
+    forall n : R, Rnat (n - 2) -> 
+    fib n = fib (n - 2) + fib (n - 1)).
+Print fib.
+Elpi mirror_recursive_definition fib.
+Check fib_Z_prf.
+
+
+
+Definition titi := (nat_rect (fun _ : nat => list (R -> R))
+((fun _ : R => 0) :: nil)
+(fun (_ : nat) (v : list (R -> R)) =>
+(fun m : R => nth 0 v (id_R 1) m) :: nil)
+(IRN (Rabs 1))).
+Check titi.
 
 Ltac r_compute_rewrite P := rewrite P.
 

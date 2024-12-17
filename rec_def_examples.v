@@ -803,68 +803,11 @@ Recursive (def bin2 such that
 Print bin2.
 Check bin_eqn.
 (* Fail Elpi mirror_recursive_definition bin. *)
-Fail Elpi mirror_recursive_definition bin2.
-Definition bin_Z_mirror :=
-fun n : Z =>
-  nth 0 (nat_rect (fun _ : nat => list (Z->Z)) 
-  ((fun m => if (Zeq_bool m 0%Z) then 1%Z else 0%Z) :: nil)
-  (fun (_ : nat) (v : list (Z->Z)) => (fun m => (if (Zeq_bool m 0%Z) then 1%Z else ((nth 0 v (id_Z 1)) m + (nth 0 v (id_Z 1) (m-1)))%Z)):: nil) (Z.abs_nat n)) (id_Z 1).
-Print bin_Z_mirror.
-Compute (bin_Z_mirror (-3) 5).
-Definition bin_Z_mirror_bis:=
-fun n : Z =>
-  nth 0 (nat_rect (fun _ : nat => list (Z->Z)) 
-  ((fun m => at_x_Z 0%Z 1%Z 0%Z m) :: nil)
-  (fun (_ : nat) (v : list (Z->Z)) => 
-  (fun m => 
-  at_x_Z (0%Z) (1%Z) ((nth 0 v (id_Z 1)) (m-1) + (nth 0 v (id_Z 1) m))%Z m):: nil) (Z.abs_nat n)) (id_Z 1).
+ Elpi mirror_recursive_definition bin2.
+ Check bin2_Z_prf.
+ Check fib_Z_prf.
+ Check bin2.
+  R_compute ((bin2 18) 12) thm.
+Check thm. 
 
 
-Goal forall x y : Z, bin2 (Rabs(IZR x)) (IZR y) = IZR (bin_Z_mirror_bis x y).
-
-unfold bin2.
-unfold bin_Z_mirror_bis.
-unfold Rnat_rec.
-intros x y.
-assert (P_trans1 (nat_rect (fun _ : nat => list (R -> R)) ((fun m : R => at_x 0 1 0 m) :: nil)
-(fun (_ : nat) (v : list (R -> R)) =>
-(fun m : R => at_x 0 1 (nth 0 v (id_R 1) (m - 1) + nth 0 v (id_R 1) m) m)
-:: nil) (IRN (Rabs (IZR x)))) IZR (nat_rect (fun _ : nat => list (Z -> Z)) ((fun m : Z => at_x_Z 0 1 0 m)
-:: nil)
-(fun (_ : nat) (v : list (Z -> Z)) =>
-(fun m : Z => at_x_Z 0 1 (nth 0 v (id_Z 1) (m-1) + nth 0 v (id_Z 1)
-m )%Z m) :: nil) (Z.abs_nat x))).
-  replace (IRN (Rabs (IZR x))) with (Z.abs_nat x) by (rewrite  (private.INR_Z_abs_nat _ x); auto; rewrite IRN_INR ; auto).
-  apply nat_rect_list.
-    intros k u.
-    case k.
-      simpl.
-      apply private.IZR_map4.
-              exact at_x_compute.
-            reflexivity.
-          reflexivity.
-        reflexivity.
-      reflexivity.
-    simpl.
-    now intros [|n]; auto.
-  intros _ lr lz IH k u.
-  unfold P_trans1 in IH.
-  destruct k as [ | [ | ]]; simpl;auto.
-  apply private.IZR_map4.
-          exact at_x_compute.
-        reflexivity.
-      reflexivity.
-    apply private.IZR_map2.
-        exact add_compute.
-      apply private.IZR_map1.
-        apply IH.
-      apply sub_compute.
-    apply IH.
-  reflexivity.
-apply H.
-Qed.
-
-
-
-
-Compute (bin_Z_mirror_bis 5 2). 
