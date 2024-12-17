@@ -153,7 +153,13 @@ intros opr opz morph a b ab.
 now rewrite ab, morph.
 Qed.
 
-
+Lemma IZR_map1' {opr} {opz} : 
+  (forall a, opr (IZR a) = IZR (opz a)) ->
+  forall a b, a = IZR b -> opr a = IZR (opz b).
+Proof.
+intros morph a b ab.
+now rewrite ab, morph.
+Qed.
 
 (* This may be dead code. *)
 Lemma IZR_map1_abs : forall opr opz,
@@ -234,6 +240,18 @@ Lemma cancel_Rabs_pos (f : R -> R) (fz : Z -> Z):
 Proof.
 intros morph p.
 rewrite <- (morph _ _ eq_refl).
+now rewrite <- abs_IZR.
+Qed.
+
+Lemma cancel_Rabs_pos2 (f : R -> R -> R) (fz : Z -> Z -> Z):
+  (forall (n : R) (z : Z), n = IZR z ->
+   forall (m : R) (y : Z), m = IZR y ->
+     f (Rabs n) m = IZR (fz z y)) ->
+  forall (p  : positive) (m:R) (y:Z), m=IZR y ->
+    f (IZR (Z.pos p)) m = IZR (fz(Z.pos p) y).
+Proof.
+intros morph p m y my.
+rewrite <- (morph _ _ eq_refl _ _ my).
 now rewrite <- abs_IZR.
 Qed.
 
