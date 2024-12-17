@@ -662,13 +662,14 @@ shift_real K N {{lp:N + lp:K_as_real}}:-
     0 < K,
     int_to_real K K_as_real].
 
-% QUIRKY: performs part of the jobs of finding the uses of the function
-% given as second argument inside the fourth argument.
-% The fourth argument has to be a sequence of nested implications whose
-% conclusion is an equality.  The instances we are looking for have to be
-% of the form (F (n - k)).  The k values must be real-positive numbers.
-% The first argument is the depth of the recursion, The third argument
-% is the numeric variable used for recursion.
+% QUIRKY: This function returns the right-hand side of the equality
+% coming fromt the step case of the recursive definition.  It simply
+% discards the premises of existing implications.  In the, it is expected
+% that these conditions are enough to make the recursive equation, but
+% they are not subject to any analysis from this code.  In principle, the
+% user could include premises that are too strong, thus rendering the
+% definition unusable.
+
 pred eat_implications i:term, i:term, i:term, o:term.
 
 eat_implications F N (prod _ _ G) R :-
@@ -676,8 +677,6 @@ eat_implications F N (prod _ _ G) R :-
   (pi x y\ G x = G y), !,
   pi h \ 
    eat_implications F N (G h) R.
-
-eat_implications F N {{lp:F lp:N = lp:RHS}} RHS.
 
 pred translate_recursive_body i:int, i:term, i:term, i:term, i:term, i:term, o:term.
 
@@ -751,8 +750,7 @@ find_uses_of Ty F Spec Final Order_Z :-
     int_to_Z Order Order_Z
   ].
 
-
-pred make_eqn_proof i:Name, i:term, i:term, i:constant.
+pred make_eqn_proof i:string, i:term, i:term, i:constant.
 
 make_eqn_proof N_id Abs_eqn  Order C :-
 std.do![
