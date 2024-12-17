@@ -88,6 +88,20 @@ rewrite <- (Rabs_right n);[ | assert (tmp := Rnat_ge0 n nnat); lra].
 now apply abs_morph.
 Qed.
 
+
+Lemma nat_rect_transfer {A B : Type} (rel : A->B->Prop)
+(va : A) (vb : B) (fa : nat-> A -> A) (fb : nat -> B -> B) :
+rel va vb -> (forall n ua ub, rel ua ub -> rel (fa n ua) (fb n ub)) ->
+forall n, rel (nat_rect (fun _ : nat => A) va fa n) (nat_rect (fun _ : nat => B) vb fb n).
+intros base IH.
+induction n as [|n IHn].
+  simpl.
+  exact base.
+simpl.
+apply IH.
+apply IHn.
+Qed.
+
 Lemma nat_rect_list_IZR (l0 : list Z) 
   (l' : list R) (f : nat -> list Z -> list Z)
   (f' : nat -> list R -> list R)
@@ -98,12 +112,11 @@ Lemma nat_rect_list_IZR (l0 : list Z)
   nat_rect (fun _ => list R) l' f' n =
   map IZR (nat_rect (fun _ => list Z) l0 f n).
 Proof.
-intros ll' ff'; induction n as [ | n Ih].
-  easy.
-simpl.
-apply ff'.
-apply Ih.
+intros ll' ff'.
+apply (nat_rect_transfer (fun x y => x = map IZR y)); auto.
 Qed.
+
+
 
 Lemma Rnat_rec_nat (l0 : list R) (f : R -> list R -> list R) (n : R) :
   Forall Rnat l0 ->
@@ -140,6 +153,8 @@ intros opr opz morph a b ab.
 now rewrite ab, morph.
 Qed.
 
+
+
 (* This may be dead code. *)
 Lemma IZR_map1_abs : forall opr opz,
   (forall x y, x = IZR y -> opr (Rabs x) = IZR (opz y)) ->
@@ -163,12 +178,31 @@ intros opr opz morph a b c d ac bd.
 now rewrite ac, bd, morph.
 Qed.
 
+Lemma IZR_map3 : forall opr opz,
+  (forall a b c, opr (IZR a) (IZR b) (IZR c)= IZR (opz a b c)) ->
+  forall a b c d e f, a = IZR d -> b = IZR e -> c = IZR f ->
+  opr a b c = IZR (opz d e f).
+Proof.
+intros opr opz morph a b c d e f ad be cf.
+now rewrite ad, be, cf, morph.
+Qed.
+
+Lemma IZR_map4 : forall opr opz,
+  (forall a b c d, opr (IZR a) (IZR b) (IZR c) (IZR d)= IZR (opz a b c d)) ->
+  forall a b c d e f g h, a = IZR e -> b = IZR f -> c = IZR g -> d = IZR h ->
+  opr a b c d = IZR (opz e f g h).
+Proof.
+intros opr opz morph a b c d e f g h ae bf cg dh.
+now rewrite ae, bf, cg, dh, morph.
+Qed.
+
 Lemma nth_map {A B : Type} (da : A) (db : B) (f : A -> B) (la : list A)
   (lb : list B) (k : nat):
   db = f da ->
   lb = map f la ->
   nth k lb db = f (nth k la da).
 Proof.
+  Check map_nth.
 intros dq lq; rewrite dq, lq; apply map_nth.
 Qed.
 
@@ -223,6 +257,7 @@ apply IZR_le.
 now rewrite (Zle_is_le_bool 0).
 Qed.
 
+
 End private.
 
 Ltac prove_recursive_specification T Order := unfold T;
@@ -264,6 +299,98 @@ Fixpoint id_Z (n : nat) : (ty_Z n):=
    0 => 0%Z
   | S p => (fun k => (id_Z p))
   end.
+
+
+Definition P_trans1 (l : list (R -> R)) (f : Z -> R) (l' : list (Z->Z)) :=
+forall i : nat, forall x : Z, nth i l (id_R 1) (f x) = f (nth i l' (id_Z 1) x).
+
+Definition P_trans1' (l : list (R -> R)) (f : Z->R) (l' : list (Z->Z)) :=
+forall (i : nat) (x : Z) (y : R), y = (f x) -> nth i l (id_R 1) y = f (nth i l' (id_Z 1) x).
+
+Lemma trf_trans : forall l f l', P_trans1 l f l' -> P_trans1' l f l'.
+Proof.
+  intros l f l'.
+  unfold P_trans1.
+  unfold P_trans1'.
+  intros H i x y xy.
+  rewrite xy.
+  apply H.
+Qed.
+
+Lemma trf_trans_rev : forall l f l', P_trans1 l f l' <-> P_trans1' l f l'.
+Proof.
+  intros l f l'.
+  unfold P_trans1.
+  unfold P_trans1'.
+  split.
+  intros H i x y xy.
+  rewrite xy.
+  apply H.
+  intros H i x.
+  apply H.
+  reflexivity.
+Qed.
+
+Lemma fun1_trf (g : R -> R) (g' : Z -> Z) (f : Z -> R) : 
+(forall x, g (f x) = f (g' x)) <-> (forall x y, x = (f y) -> (g x) = f (g' y)).
+Proof.
+  split.
+    intros H x y xy.
+    rewrite xy.
+  apply H.
+  intros H x.
+  apply H.
+  reflexivity.
+Qed.
+
+
+Lemma P_trans1_nil :  P_trans1 nil IZR nil.
+unfold P_trans1.
+destruct i as [|i].
+intros.
+reflexivity.
+intros.
+reflexivity.
+Qed.
+
+Lemma P_trans1_cons A A' B B': (forall x, A (IZR x) = IZR (A' x)) -> P_trans1 B IZR B' -> P_trans1 (cons A B) IZR (cons A' B').
+Proof.
+  unfold P_trans1.
+  intros Aeq PtB i z.
+  case i.
+    now simpl.
+  simpl.
+  intro n.
+  apply PtB.
+Qed.
+
+
+
+Lemma nth_overflow_1 A A' p x : nth (S p) (A::nil) (id_R 1) (IZR x) = IZR (nth (S p) (A'::nil) (id_Z 1) x).
+case p.
+reflexivity.
+reflexivity.
+Qed.
+
+(* Lemma prf_if a az b bz c cz : a = IZR A ->  *)
+
+Lemma nat_rect_list :
+  forall (l0 : list (Z->Z)) (l' : list (R->R))
+    (f : nat -> list (Z->Z) -> list (Z->Z))
+    (f' : nat -> list (R->R) -> list (R->R))
+    (n : nat),
+    P_trans1 l' IZR l0 ->
+    (forall n lr lz, P_trans1 lr IZR lz -> 
+        P_trans1 (f' n lr) IZR (f n lz)) ->
+    P_trans1 (nat_rect (fun _ : nat => list (R->R)) l' f' n) 
+             IZR 
+             (nat_rect (fun _ : nat => list (Z->Z)) l0 f n).
+Proof.
+  intros l0 l' f f' n H H'.
+  apply (private.nat_rect_transfer (fun x y => P_trans1 x IZR y)); auto.
+Qed. 
+
+
 Elpi Command Recursive.
 
 Elpi Accumulate lp:{{
