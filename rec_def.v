@@ -750,6 +750,7 @@ find_uses_of Ty F Spec Final Order_Z :-
     int_to_Z Order Order_Z
   ].
 
+
 pred make_eqn_proof i:string, i:term, i:term, i:constant.
 
 make_eqn_proof N_id Abs_eqn  Order C :-
