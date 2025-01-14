@@ -678,6 +678,8 @@ eat_implications F N (prod _ _ G) R :-
   pi h \ 
    eat_implications F N (G h) R.
 
+eat_implications F N {{lp:F lp:N = lp:RHS}} RHS.
+
 pred translate_recursive_body i:int, i:term, i:term, i:term, i:term, i:term, o:term.
 
 translate_recursive_body Order F VTy DefN N RHS R :-
@@ -733,7 +735,6 @@ find_uses_of Ty F Spec Final Order_Z :-
     check_all_present 0 Sps2 Order,
     make_initial_list T2 Sps2 ListSps,
     fetch_recursive_equation Spec Ts,
-
   type_to_nargs T2 Nargs,
   nargs_to_def_val Nargs DefN,
 % TODO : error reporting is not satisfactory here
