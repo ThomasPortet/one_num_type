@@ -415,7 +415,6 @@ Elpi Accumulate Db R_translate.db.
 Elpi Accumulate lp:{{
 
 pred prf_stmt i:term, i:term, i:term, o:term.
-prf_stmt Ty _ _ _ :- coq.say Ty, fail.
 
 prf_stmt {{Z->Z}} Ft FG {{forall (n:R) z, n = IZR z ->
           lp:FG (Rabs n) = IZR (lp:Ft z)}}.
@@ -543,9 +542,10 @@ std.do! [
 main L :-
   coq.error "Usage: Elpi mirror_recursive_definition Name.\n instead received: " L.
 }}.
-
 Elpi Typecheck.
-Recursive (def foo such that 
+
+
+(*Recursive (def foo such that 
     foo 0 = (fun m => 0) /\ 
     forall n, Rnat (n-1) -> foo n = fun m => (foo (n-1)) m).
     Print foo.
@@ -573,8 +573,8 @@ coq.say "DEBUG TY2" {coq.term->string Stmt}
 }}.
 Elpi mirror_recursive_definition foo.
 Check foo_Z_prf.
-R_compute (foo  5 2).
-
+R_compute (foo  5 2). *)
+(* 
 Parameter toto : forall (r : R) (z : Z),
 r = IZR z ->
 (fun x : nat =>
@@ -603,7 +603,7 @@ Print fib.
 Elpi mirror_recursive_definition fib.
 Check fib_Z_prf.
 
-
+ *)
 
 Definition titi := (nat_rect (fun _ : nat => list (R -> R))
 ((fun _ : R => 0) :: nil)

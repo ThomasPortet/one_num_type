@@ -800,13 +800,12 @@ Recursive (def bin such that
 Recursive (def bin2 such that 
     bin2 0 = (fun m => at_x 0 1 0 m) /\ 
     forall n, Rnat (n-1) -> bin2 n = 
-    (fun m => at_x 0 1 ((bin2 ((n-1))) (m-1) + (bin2 (n-1)) m) m)).       
+    (fun m => at_x 0 1 ((bin2 ((n-1))) (m-1) + (bin2 (n-1)) m) m)).
 Print bin2.
 Check bin_eqn.
 (* Fail Elpi mirror_recursive_definition bin. *)
  Elpi mirror_recursive_definition bin2.
  Check bin2_Z_prf.
- Check fib_Z_prf.
  Check bin2.
   R_compute ((bin2 18) 12) thm.
 Check thm. 

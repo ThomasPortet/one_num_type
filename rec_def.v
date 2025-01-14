@@ -735,7 +735,6 @@ find_uses_of Ty F Spec Final Order_Z :-
     check_all_present 0 Sps2 Order,
     make_initial_list T2 Sps2 ListSps,
     fetch_recursive_equation Spec Ts,
-
   type_to_nargs T2 Nargs,
   nargs_to_def_val Nargs DefN,
 % TODO : error reporting is not satisfactory here
