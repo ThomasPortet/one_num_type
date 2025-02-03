@@ -100,6 +100,8 @@ Elpi Db R_translate.db lp:{{
 pred translate_prf i:term, o:term, o:term.
 pred main_translate_prf i:term, o:term, o:term.
 pred translate_collect_prf i:term, o:term, o:term, o:list (pair int term).
+pred thm_table o:term, o:term, o:term.
+pred nat_thm_table o:term, o:term, o:term.
 
 translate_prf (fun N {{nat}} F) (fun N {{nat}} F1)
   T :-
@@ -111,7 +113,7 @@ translate_prf (fun N {{nat}} F) (fun N {{nat}} F1)
 translate_prf (fun M {{R}} Bo) (fun M {{Z}} BoZ) Prf :-
   (pi V VZ H\
   (decl V M {{R}} ,
-  translate_prf V VZ H) =>
+  translate_prf V VZ H) ==>
   translate_prf (Bo V) (BoZ VZ) (Pf V VZ H),
   Prf = {{fun (r : R) (z : Z) (h : r = IZR z) => lp:(Pf r z h)}}).
   
@@ -126,7 +128,7 @@ translate_prf (fun M {{R}} Bo) (fun M {{Z}} BoZ) Prf :-
 translate_prf (fun L {{list R}} F) (fun L {{list Z}} F1)
   PF0 :-
   (pi Cl1 Cl2 Hll \
-    translate_prf Cl1 Cl2 Hll =>
+    translate_prf Cl1 Cl2 Hll ==>
     translate_prf (F Cl1) (F1 Cl2) (PF Cl1 Cl2 Hll)),
     PF0 = {{fun (lr : list (ty_R 0)) (lz : list Z)
       (h : lr = @map Z R IZR lz :> list (ty_R 0)) => lp:(PF lr lz h)}}.
@@ -364,8 +366,6 @@ pred nat_thm_table o:term, o:term, o:term.
 
 }}.
 
-Elpi Typecheck.
-
 Elpi Command R_compute.
 
 Elpi Accumulate Db R_compute.db.
@@ -397,7 +397,6 @@ main [trm E, str THM_name] :-
 
 }}.
 
-Elpi Typecheck.
 
 Elpi Export R_compute.
 
@@ -419,7 +418,6 @@ Elpi Accumulate lp:{{
     coq.error "Usage: Elpi add_computation Name1 Name2 Name3.\n instead received: " L.
 }}.
 
-Elpi Typecheck.
 
 Elpi Export add_computation.
 
@@ -558,7 +556,6 @@ std.do! [
 main L :-
   coq.error "Usage: Elpi mirror_recursive_definition Name.\n instead received: " L.
 }}.
-Elpi Typecheck.
 
 
 (*Recursive (def foo such that 
@@ -651,7 +648,6 @@ solve A B :-
   coq.say "wrong" A B.
 }}.
 
-Elpi Typecheck.
 
 (* The following experiment prefigures what can be done
    so that R_compute returns not only the value but also

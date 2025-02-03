@@ -787,7 +787,6 @@ main _L :-
 
 }}.
 
-Elpi Typecheck.
 Elpi Export Recursive.
 
   
