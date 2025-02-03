@@ -40,10 +40,70 @@ Proof.
   reflexivity.
 Qed.
 
+Search ( IZR _ <> IZR _).
+Lemma Zeq_bool_IZR_neq x y : (IZR x) <> (IZR y)  -> x <> y.
+Proof.
+  intros H1 H2.
+  apply H1.
+  rewrite H2.
+  reflexivity.
+Qed.
+
 Lemma abs_compute : forall x, Rabs (IZR x) = IZR (Z.abs x).
 Proof.
 exact (fun x => eq_sym (abs_IZR x)).
 Qed.
+
+Definition Req_bool (x y : R) := if (Req_dec_T x y) then true else false.
+Notation "x =? y" := (Req_bool x y) : R_scope.
+
+Lemma eq_bool_compute : forall x y, Req_bool (IZR x) (IZR y) = (Zeq_bool x y).
+Proof.
+  intros.
+  unfold Req_bool.
+  destruct Req_dec_T as  [eqR|neqR] .
+    now rewrite (Zeq_bool_IZR x y).
+  unfold Zeq_bool.
+  apply Zeq_bool_IZR_neq in neqR.
+  rewrite <- Z.eqb_neq in neqR.
+  now rewrite <- Z.eqb_compare, neqR.
+Qed.
+(* 
+Lemma if_compute : (forall x y z, if 
+Search (if _ then _ else _ ). *)
+Definition MyINR : N -> R :=
+fun n => match n with
+| 0%N => 0
+| N.pos p => IZR (Z.pos p)
+  end.
+
+Definition at_x (a b c : R) := fun x => if (Req_bool x a) then b else (c).
+
+Definition at_x_Z (a b c : Z) := fun x => if (Zeq_bool x a) then b else c.
+
+Lemma at_x_compute : forall a b c x, at_x (IZR a) (IZR b) (IZR c) (IZR x) = IZR (at_x_Z a b c x).
+Proof.
+  intros.
+  unfold at_x.
+  unfold at_x_Z.
+  rewrite <-eq_bool_compute.
+  now destruct (Req_bool (IZR x) (IZR a)).
+Qed.
+
+
+Definition IZR2 (f : Z -> Z) :=
+fun r : R =>
+  IZR(f (IRZ r)).
+
+
+Lemma nil_2 :  nil = @map (ty_Z 1) (ty_R 1) IZR2 nil.
+Proof.
+  unfold IZR2.
+  now simpl.
+Qed.  
+
+Definition nat1 := nat.
+
 
 Definition Req_bool (x y : R) := if (Req_dec_T x y) then true else false.
 Notation "x =? y" := (Req_bool x y) : R_scope.
@@ -101,11 +161,31 @@ pred translate_prf i:term, o:term, o:term.
 pred main_translate_prf i:term, o:term, o:term.
 pred thm_table o:term, o:term, o:term.
 pred nat_thm_table o:term, o:term, o:term.
+pred thm_table o:term, o:term, o:term.
+pred nat_thm_table o:term, o:term, o:term.
 
 translate_prf (fun N {{nat}} F) (fun N {{nat}} F1)
   T :-
+  T :-
   (pi CN \
     translate_prf {{INR lp:CN}} {{Z.of_nat lp:CN}} {{INR_IZR_INZ lp:CN}} =>
+    translate_prf (F CN) (F1 CN) (PF CN)),
+    T = (fun N {{nat1}} PF).
+
+translate_prf (fun M {{R}} Bo) (fun M {{Z}} BoZ) Prf :-
+  (pi V VZ H\
+  (decl V M {{R}} ,
+  translate_prf V VZ H) ==>
+  translate_prf (Bo V) (BoZ VZ) (Pf V VZ H),
+  Prf = {{fun (r : R) (z : Z) (h : r = IZR z) => lp:(Pf r z h)}}).
+  
+
+% translate_prf {{if lp:A then lp:B else lp:C}} {{if lp:AZ then lp:BZ else lp:CZ}} (prf_if lp:A lp:AZ lp:B lp:BZ lp:C lp:CZ lp:PrfA lp:PrfB lp:PrfC)  :-
+%    std.do! [
+%   translate_prf A AZ PrfA,
+%   translate_prf B BZ PrfB,
+%   translate_prf C CZ PrfC,
+%   ].
     translate_prf (F CN) (F1 CN) (PF CN)),
     T = (fun N {{nat1}} PF).
 
@@ -128,10 +208,26 @@ translate_prf (fun L {{list R}} F) (fun L {{list Z}} F1)
   PF0 :-
   (pi Cl1 Cl2 Hll \
     translate_prf Cl1 Cl2 Hll ==>
+    translate_prf Cl1 Cl2 Hll ==>
     translate_prf (F Cl1) (F1 Cl2) (PF Cl1 Cl2 Hll)),
     PF0 = {{fun (lr : list (ty_R 0)) (lz : list Z)
       (h : lr = @map Z R IZR lz :> list (ty_R 0)) => lp:(PF lr lz h)}}.
+    PF0 = {{fun (lr : list (ty_R 0)) (lz : list Z)
+      (h : lr = @map Z R IZR lz :> list (ty_R 0)) => lp:(PF lr lz h)}}.
 
+ translate_prf (fun L {{list (R -> R)}} F) (fun L {{list (Z -> Z)}} F1)
+   PF0 :-
+   (pi Cl1 Cl2 Hll L2 \
+   (decl Cl1 L {{list (R -> R)}},
+    decl Cl2 _ {{list (Z -> Z)}},
+    decl Hll `IH` {{P_trans1 lp:Cl1 IZR lp:Cl2}},
+     translate_prf Cl1 Cl2 Hll) =>
+     translate_prf (F Cl1) (F1 Cl2) (PF Cl1 Cl2 Hll)),
+     PF0 = {{fun (lr : list (R->R)) (lz : list (Z->Z)) 
+       (h : P_trans1 lr IZR lz ) => lp:(PF lr lz h)}}.
+
+translate_prf {{nth lp:K lp:L (id_R 0)}} {{nth lp:K lp:Lz (id_Z 0)}}
+  {{private.nth_map (id_Z 0) (id_R 0) IZR lp:Lz lp:L lp:K eq_refl lp:H}} :-
  translate_prf (fun L {{list (R -> R)}} F) (fun L {{list (Z -> Z)}} F1)
    PF0 :-
    (pi Cl1 Cl2 Hll L2 \
@@ -152,6 +248,11 @@ translate_prf {{nth lp:K lp:L (id_R 1) lp:A_r}} {{nth lp:K lp:Lz (id_Z 1) lp:A_z
   translate_prf L Lz H,
   translate_prf A_r A_z Pa.
 
+translate_prf {{nth lp:K lp:L (id_R 1) lp:A_r}} {{nth lp:K lp:Lz (id_Z 1) lp:A_z}}
+  {{(trf_trans lp:L IZR lp:Lz lp:H) lp:K lp:A_z lp:A_r lp:Pa}} :-
+  translate_prf L Lz H,
+  translate_prf A_r A_z Pa.
+
 translate_prf {{@nil R}} {{@nil Z}} {{eq_refl : nil = @map Z R IZR nil}}.
 
 translate_prf {{@nil (R->R)}} {{@nil (Z->Z)}} {{P_trans1_nil}}.
@@ -163,7 +264,17 @@ translate_prf {{@cons R lp:A lp:L}} {{cons lp:A1 lp:L1}}
     translate_prf L L1 Pfl
   ].
 
+translate_prf {{@nil (R->R)}} {{@nil (Z->Z)}} {{P_trans1_nil}}.
+
+translate_prf {{@cons R lp:A lp:L}} {{cons lp:A1 lp:L1}}
+  {{f_equal2 (@cons (ty_R 0)) lp:Pfa lp:Pfl}}:-
+  std.do! [
+    translate_prf A A1 Pfa,
+    translate_prf L L1 Pfl
+  ].
+
 translate_prf {{cons lp:A lp:L}} {{cons lp:A1 lp:L1}}
+  {{P_trans1_cons lp:A lp:A1 lp:L lp:L1 (proj2 (fun1_trf lp:A lp:A1 IZR) lp:Pfa) lp:Pfl}}:-
   {{P_trans1_cons lp:A lp:A1 lp:L lp:L1 (proj2 (fun1_trf lp:A lp:A1 IZR) lp:Pfa) lp:Pfl}}:-
   std.do! [
     translate_prf A A1 Pfa,
