@@ -8,6 +8,7 @@
 *.cmxa
 *.cmxs
 *.glob
+*.json
 *.ml.d
 *.ml4.d
 *.mli.d
@@ -15,6 +16,7 @@
 *.mlpack.d
 *.native
 *.o
+*.pdf
 *.v.d
 *.vio
 *.vo
@@ -33,5 +35,9 @@ nlia.cache
 nra.cache
 *~texput.log
 Makefile
+CoqMakefile
+CoqMakefile.conf
 Makefile.conf
 *~
+*.gz
+*.tex
