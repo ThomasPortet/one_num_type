@@ -743,8 +743,6 @@ find_uses_of Ty F Spec Final Order_Z :-
     (pi n\
       decl n Scalar_name Sc_type =>
       (eat_implications F n (F1 n) (Body n),
-      translate_recursive_body Order F n (Body n) (Main_expression n))),
-      (eat_implications Order F n (F1 n) (Body n),
       translate_recursive_body Order F T2 DefN n (Body n) (Main_expression n))),
     %Final = {{Rnat_rec lp:ListSps (fun x : R => lp:(Main_expression x)) }},
     Final = {{ fun r : R => @nth lp:T2 0 
