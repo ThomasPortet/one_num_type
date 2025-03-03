@@ -9,6 +9,45 @@ Require Import Derive.
 
 Open Scope R_scope.
 
+Fixpoint ty_R (n : nat) : Type := 
+  match n with
+   0 => R
+  | S p => (R -> ty_R p)
+  end.
+
+Fixpoint id_R (n : nat) : (ty_R n):= 
+  match n with
+   0 => 0%R
+  | S p => (fun k => (id_R p))
+  end.
+
+Fixpoint ty_Z (n : nat) : Type := 
+  match n with
+   0 => Z
+  | S p => (Z -> ty_Z p)
+  end.
+
+Fixpoint id_Z (n : nat) : (ty_Z n):= 
+  match n with
+   0 => 0%Z
+  | S p => (fun k => (id_Z p))
+  end.
+
+Fixpoint MappZ {n : nat} (f : ty_Z n) (l : list Z):=
+  match n return ty_Z n -> list Z -> Z with 
+  |0 => fun (f : ty_Z 0) (l: list Z) => f
+  |S p => fun (f: Z -> ty_Z p) (l : list Z) =>
+      match l with nil => MappZ (f 0%Z) nil
+                  |a::tl => MappZ (f a) tl end
+  end f l.
+
+Fixpoint MappR {n : nat} (f : ty_R n) (l : list R):=
+  match n return ty_R n -> list R -> R with 
+  |0 => fun (f : ty_R 0) (l: list R) => f
+  |S p => fun (f: R -> ty_R p) (l : list R) =>
+      match l with nil => MappR (f 0%R) nil
+                  |a::tl => MappR (f a) tl end
+  end f l.
 Module private.
 
 (* This lemma could be used to automatically prove that functions
@@ -153,6 +192,7 @@ intros opr opz morph a b ab.
 now rewrite ab, morph.
 Qed.
 
+
 Lemma IZR_map1' {opr} {opz} : 
   (forall a, opr (IZR a) = IZR (opz a)) ->
   forall a b, a = IZR b -> opr a = IZR (opz b).
@@ -185,7 +225,7 @@ now rewrite ac, bd, morph.
 Qed.
 
 Lemma IZR_map3 : forall opr opz,
-  (forall a b c, opr (IZR a) (IZR b) (IZR c)= IZR (opz a b c)) ->
+  (forall a b c, opr (IZR a) (IZR b) (IZR c) = IZR (opz a b c)) ->
   forall a b c d e f, a = IZR d -> b = IZR e -> c = IZR f ->
   opr a b c = IZR (opz d e f).
 Proof.
@@ -194,7 +234,7 @@ now rewrite ad, be, cf, morph.
 Qed.
 
 Lemma IZR_map4 : forall opr opz,
-  (forall a b c d, opr (IZR a) (IZR b) (IZR c) (IZR d)= IZR (opz a b c d)) ->
+  (forall e f g h, opr (IZR e) (IZR f) (IZR g) (IZR h) = IZR (opz e f g h)) ->
   forall a b c d e f g h, a = IZR e -> b = IZR f -> c = IZR g -> d = IZR h ->
   opr a b c d = IZR (opz e f g h).
 Proof.
@@ -202,6 +242,17 @@ intros opr opz morph a b c d e f g h ae bf cg dh.
 now rewrite ae, bf, cg, dh, morph.
 Qed.
 
+Lemma IZR_mapN : forall n opr opz,
+  (forall (lz : list Z), @MappR n opr (List.map IZR lz) = IZR (@MappZ n opz lz))->
+  forall (lr : list R)  (lz : list Z), lr = List.map IZR lz ->
+   @MappR n opr lr = IZR (@MappZ n opz lz).
+Proof.
+  intros n opr opz morph lz lr eql.
+  rewrite eql.
+  apply morph.
+Qed.
+
+                      
 Lemma nth_map {A B : Type} (da : A) (db : B) (f : A -> B) (la : list A)
   (lb : list B) (k : nat):
   db = f da ->
@@ -294,36 +345,26 @@ Ltac prove_recursive_specification T Order := unfold T;
         enough (Last_eqn : INR (IRN (N - IZR Order)) + IZR Order = N)
             by (rewrite Last_eqn; reflexivity);
             rewrite INR_IRN;[ring | assumption]))).
-Fixpoint ty_R (n : nat) : Type := 
-  match n with
-   0 => R
-  | S p => (R -> ty_R p)
-  end.
-
-Fixpoint id_R (n : nat) : (ty_R n):= 
-  match n with
-   0 => 0%R
-  | S p => (fun k => (id_R p))
-  end.
-
-Fixpoint ty_Z (n : nat) : Type := 
-  match n with
-   0 => Z
-  | S p => (Z -> ty_Z p)
-  end.
-
-Fixpoint id_Z (n : nat) : (ty_Z n):= 
-  match n with
-   0 => 0%Z
-  | S p => (fun k => (id_Z p))
-  end.
 
 
 Definition P_trans1 (l : list (R -> R)) (f : Z -> R) (l' : list (Z->Z)) :=
-forall i : nat, forall x : Z, nth i l (id_R 1) (f x) = f (nth i l' (id_Z 1) x).
+forall (i : nat) (x : Z), nth i l (id_R 1) (f x) = f (nth i l' (id_Z 1) x).
 
-Definition P_trans1' (l : list (R -> R)) (f : Z->R) (l' : list (Z->Z)) :=
-forall (i : nat) (x : Z) (y : R), y = (f x) -> nth i l (id_R 1) y = f (nth i l' (id_Z 1) x).
+Definition P_trans1' (l : list (R -> R)) (f : Z -> R) (l' : list (Z->Z)) :=
+forall (i : nat) (x : Z) (y : R), y = (f x) ->
+nth i l (id_R 1) y = f (nth i l' (id_Z 1) x).
+
+
+Check (Z.add : ty_Z 2).
+Compute (@MappZ 2 Z.add (2%Z::3%Z::nil)).
+
+Definition P_transN (n : nat) (l : list (ty_R n)) (f : Z -> R) (l' : list (ty_Z n)) :=
+forall (i : nat) (x : (list Z)),
+MappR (nth i l (id_R n)) (List.map f x) = f (MappZ (nth i l' (id_Z n)) x).
+
+Definition P_transN' (n : nat) (l : list (ty_R n)) (f : Z -> R) (l' : list (ty_Z n)) :=
+forall (i : nat) (x : (list Z)) (y : (list R)), y = List.map f x ->
+MappR (nth i l (id_R n)) y = f (MappZ (nth i l' (id_Z n)) x).
 
 Lemma trf_trans : forall l f l', P_trans1 l f l' -> P_trans1' l f l'.
 Proof.
@@ -335,18 +376,14 @@ Proof.
   apply H.
 Qed.
 
-Lemma trf_trans_rev : forall l f l', P_trans1 l f l' <-> P_trans1' l f l'.
+Lemma trf_transN : forall n l f l', P_transN n l f l' -> P_transN' n l f l'.
 Proof.
-  intros l f l'.
-  unfold P_trans1.
-  unfold P_trans1'.
-  split.
-  intros H i x y xy.
-  rewrite xy.
+  intros n l f l'.
+  unfold P_transN.
+  unfold P_transN'.
+  intros H i x y eqyx.
+  rewrite eqyx.
   apply H.
-  intros H i x.
-  apply H.
-  reflexivity.
 Qed.
 
 Lemma fun1_trf (g : R -> R) (g' : Z -> Z) (f : Z -> R) : 
@@ -370,6 +407,7 @@ reflexivity.
 intros.
 reflexivity.
 Qed.
+Check P_trans1_nil.
 
 Lemma P_trans1_cons A A' B B': (forall x, A (IZR x) = IZR (A' x)) -> P_trans1 B IZR B' -> P_trans1 (cons A B) IZR (cons A' B').
 Proof.
@@ -408,10 +446,25 @@ Proof.
   apply (private.nat_rect_transfer (fun x y => P_trans1 x IZR y)); auto.
 Qed. 
 
-
+Lemma nat_rect_list_N :
+  forall (n' : nat) (l0 : list (ty_Z n')) (l' : list (ty_R n'))
+    (f : nat -> list (ty_Z n') -> list (ty_Z n'))
+    (f' : nat -> list (ty_R n') -> list (ty_R n'))
+    (n : nat),
+    P_transN n' l' IZR l0 ->
+    (forall n lr lz, P_transN n' lr IZR lz -> 
+        P_transN n' (f' n lr) IZR (f n lz)) ->
+    P_transN n' (nat_rect (fun _ : nat => list (ty_R n')) l' f' n) 
+             IZR 
+             (nat_rect (fun _ : nat => list (ty_Z n')) l0 f n).
+Proof.
+  intros n' l0 l' f f' n H H'.
+  apply (private.nat_rect_transfer (fun x y => P_transN n' x IZR y)); auto.
+Qed. 
 Elpi Command Recursive.
 
 Elpi Accumulate lp:{{
+
 
 pred type_to_nargs i:term, o:int.
 
@@ -557,6 +610,8 @@ pred replace_rec_call_by_seq_nth i:term, i:term, i:int, i:term, i:term, i:term ,
 
 replace_rec_call_by_seq_nth VTy Def L F N V A B :-
   std.do! [
+    coq.say "VTy : " {coq.term->string VTy},
+    coq.say "A : " {coq.term->string A},
     A = app[F, app [{{Rminus}}, N, K]|Args ] ,
     real_to_int K Kn,
     In is L - Kn,
@@ -683,7 +738,6 @@ eat_implications F N {{lp:F lp:N = lp:RHS}} RHS.
 pred translate_recursive_body i:int, i:term, i:term, i:term, i:term, i:term, o:term.
 
 translate_recursive_body Order F VTy DefN N RHS R :-
-
 std.do! [
       % This should recognize (f (n - k)) and store k in the list
   (pi A E Op V Args\
@@ -729,14 +783,24 @@ pred find_uses_of i:term, i:term, i:term, o:term, o:term.
 
 find_uses_of Ty F Spec Final Order_Z :-
   std.do! [
-    collect_base_specs F Spec Sps,
-    alist_sort Sps Sps2,
-    Ty = prod _ _Ty' (c0\ T2),
-    check_all_present 0 Sps2 Order,
-    make_initial_list T2 Sps2 ListSps,
-    fetch_recursive_equation Spec Ts,
+
+  collect_base_specs F Spec Sps,
+  alist_sort Sps Sps2,
+  check_all_present 0 Sps2 Order,
+  Ty = prod _ _Ty' (c0\ T2),
+  
+  make_initial_list T2 Sps2 ListSps,
+  fetch_recursive_equation Spec Ts,
   type_to_nargs T2 Nargs,
   nargs_to_def_val Nargs DefN,
+  N1 is  Nargs + 1,
+  int_to_nat N1 NatNargs,
+  coq.say "F : " F,
+  % coq.typecheck F Ty' ok,
+  % std.assert! (coq.unify Ty'{{ty_R lp:NatNargs}}) "one",
+  std.assert-ok! (coq.typecheck F {{ty_R lp:NatNargs}})
+  "one of the argument's type couldn't be determined",
+  coq.say "F : " {coq.term->string F},
 % TODO : error reporting is not satisfactory here
     std.assert! (Ts = [prod Scalar_name Sc_type F1])
        "Expecting exactly one recursive equation",
