@@ -241,7 +241,7 @@ Proof.
 intros opr opz morph a b c d e f g h ae bf cg dh.
 now rewrite ae, bf, cg, dh, morph.
 Qed.
-
+Check f_equal2.
 Lemma IZR_mapN : forall n opr opz,
   (forall (lz : list Z), @MappR n opr (List.map IZR lz) = IZR (@MappZ n opz lz))->
   forall (lr : list R)  (lz : list Z), lr = List.map IZR lz ->
@@ -398,6 +398,18 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma funN_trf {n : nat} (g : ty_R n) (g' : ty_Z n) (f : Z -> R) : 
+(forall x, MappR g (map f x) = f (MappZ g' x)) <->
+(forall x y, x = map f y -> MappR g x = f (MappZ g' y)).
+Proof.
+  split.
+    intros H x y xy.
+    rewrite xy.
+  apply H.
+  intros H x.
+  apply H.
+  reflexivity.
+Qed.
 
 Lemma P_trans1_nil :  P_trans1 nil IZR nil.
 unfold P_trans1.
@@ -407,7 +419,6 @@ reflexivity.
 intros.
 reflexivity.
 Qed.
-Check P_trans1_nil.
 
 Lemma P_trans1_cons A A' B B': (forall x, A (IZR x) = IZR (A' x)) -> P_trans1 B IZR B' -> P_trans1 (cons A B) IZR (cons A' B').
 Proof.
@@ -419,10 +430,43 @@ Proof.
   intro n.
   apply PtB.
 Qed.
+Lemma nth_nil {A:Type} n (d:A) : nth n nil d = d.
+Proof.
+  now destruct n.
+Qed.
 
+Lemma P_transN_nil n :  P_transN n (@nil (ty_R n)) IZR (@nil (ty_Z n)).
+unfold P_transN.
+intros i x.
+rewrite !nth_nil.
+revert x.
+induction n.
+  simpl.
+  easy.
+intros x.
+simpl.
+destruct x.
+  simpl.
+  apply (IHn nil).
+simpl.
+apply IHn.
+Qed.
 
+Lemma P_transN_cons n A A' B B' :
+(forall x, MappR A (map IZR x) = IZR (MappZ A' x)) ->
+ P_transN n B IZR B' -> P_transN n (cons A B) IZR (cons A' B').
+Proof.
+  unfold P_transN.
+  intros Aeq PtB i z.
+  case i.
+    easy.
+  simpl.
+  intro j.
+  apply PtB.
+Qed.
 
-Lemma nth_overflow_1 A A' p x : nth (S p) (A::nil) (id_R 1) (IZR x) = IZR (nth (S p) (A'::nil) (id_Z 1) x).
+Lemma nth_overflow_1 A A' p x : 
+nth (S p) (A::nil) (id_R 1) (IZR x) = IZR (nth (S p) (A'::nil) (id_Z 1) x).
 case p.
 reflexivity.
 reflexivity.
@@ -444,7 +488,7 @@ Lemma nat_rect_list :
 Proof.
   intros l0 l' f f' n H H'.
   apply (private.nat_rect_transfer (fun x y => P_trans1 x IZR y)); auto.
-Qed. 
+Qed.
 
 Lemma nat_rect_list_N :
   forall (n' : nat) (l0 : list (ty_Z n')) (l' : list (ty_R n'))
@@ -460,7 +504,65 @@ Lemma nat_rect_list_N :
 Proof.
   intros n' l0 l' f f' n H H'.
   apply (private.nat_rect_transfer (fun x y => P_transN n' x IZR y)); auto.
-Qed. 
+Qed.
+
+Definition tail_addmul :=
+  nat_rect (fun _ : nat => list (R -> R -> R -> R))
+    ((fun m r x => r):: nil)
+    (fun nm1 : nat => (fun v =>
+      (fun m r x => nth 0 v (id_R 3) m (m + r) x) :: nil)).
+
+Definition tail_addmul_step :=
+(fun nm1 : nat => (fun v =>
+(fun m r x => nth 0 v (id_R 3) m (m + r) x) :: nil)).
+
+Definition tail_addmulZ :=
+  nat_rect (fun _ : nat => list (Z -> Z -> Z -> Z))
+    ((fun m r x => r):: nil)
+    (fun nm1 : nat => (fun v =>
+      (fun m r x => nth 0 v (id_Z 3) m (m + r)%Z x) :: nil)).
+
+Definition tail_addmul_stepZ :=
+  (fun nm1 : nat => (fun v =>
+  (fun m r x => nth 0 v (id_Z 3) m (m + r)%Z x) :: nil)).
+  
+Lemma toto :  forall a b c d,
+nth 0 (tail_addmul a) (id_R 3) (IZR b) (IZR c) (IZR d) =
+IZR (nth 0 (tail_addmulZ a) (id_Z 3) b c d).
+Proof.
+intros a b c d.
+assert (base_h : P_transN 3 ((fun _ r _ => r) :: nil) IZR
+         ((fun _ r _ => r) :: nil)).
+  unfold P_transN.
+  intros [ | [ | k]] [ | u [ | v [ | w tl]]];
+  reflexivity.
+assert (step_h : (forall (n : nat) (lr : list (ty_R 3)) (lz : list (ty_Z 3)),
+P_transN 3 lr IZR lz -> P_transN 3 (tail_addmul_step n lr) IZR
+  (tail_addmul_stepZ n lz))).
+  intros n lr lz Ih.
+  intros [ | i'] x.
+  destruct x as [ | u [ | v [ | w tl]]]; 
+  cbn [MappR map MappZ tail_addmul_step tail_addmul_stepZ nth];
+  match goal with 
+    |- _ _ _ _ ?a ?b ?c = IZR (_ _ _ _ ?a' ?b' ?c') =>
+  assert (tmp := trf_transN 3 _ IZR _ Ih 0%nat (a' :: b' :: c':: nil)%Z
+  (a :: b :: c :: nil)); apply tmp; cbn [map];
+  apply f_equal2;[ 
+     reflexivity | apply f_equal2;[
+       rewrite plus_IZR; easy | apply f_equal2;[ reflexivity | reflexivity]]]
+end.
+destruct x as [ | u [ | v [ | w tl]]]; destruct i' as [ | i'']; easy.
+generalize (nat_rect_list_N 3
+  ((fun m r x => r) :: nil) ((fun m r x => r) :: nil)
+  tail_addmul_stepZ tail_addmul_step a base_h step_h 0%nat
+  (b :: c :: d :: nil)).
+simpl.
+unfold tail_addmul.
+intros it.
+exact it.
+Qed.
+    
+
 Elpi Command Recursive.
 
 Elpi Accumulate lp:{{
@@ -809,9 +911,9 @@ find_uses_of Ty F Spec Final Order_Z :-
       (eat_implications F n (F1 n) (Body n),
       translate_recursive_body Order F T2 DefN n (Body n) (Main_expression n))),
     %Final = {{Rnat_rec lp:ListSps (fun x : R => lp:(Main_expression x)) }},
-    Final = {{ fun r : R => @nth lp:T2 0 
-                (@Rnat_rec (list lp:T2) lp:ListSps lp:{{ fun Scalar_name {{R}}
-                              Main_expression}} r) lp:DefN}},
+    Final = {{fun r : R => @nth lp:T2 0 
+                (@Rnat_rec (list lp:T2) lp:ListSps 
+                lp:{{fun Scalar_name {{R}} Main_expression}} r) lp:DefN}},
     int_to_Z Order Order_Z
   ].
 

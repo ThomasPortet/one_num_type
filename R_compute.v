@@ -94,6 +94,22 @@ Proof.
 Qed.
 
 Definition nat1 := nat.
+About f_equal2.
+
+Check (fun (r0 : R) (z1 : Z) (h0 : r0 = IZR z1) (r1 : R) 
+                     (z2 : Z) (h1 : r1 = IZR z2) (r2 : R) (z3 : Z)
+                     (h2 : r2 = IZR z3) lr lz h =>
+                   trf_transN 3 lr IZR lz h 0%nat
+                     (z1 :: (z1 + z2)%Z :: z3 :: nil)
+                     (r0 :: r0 + r1 :: r2 :: nil)
+                     (f_equal2 cons h0
+                        (f_equal2 cons
+                           (private.IZR_map2 Rplus Z.add add_compute r0 r1 z1
+                              z2 h0 h1)
+                           (f_equal2 cons h2 (eq_refl : nil = map IZR nil))))).
+
+
+
 
 Elpi Db R_translate.db lp:{{
 pred int_to_nat i:int, o:term.
@@ -112,28 +128,50 @@ type_to_nargs (prod _ _ c\T) N1 :-
 
 type_to_nargs {{R}} 0.
 
+pred nargs_to_type i:term, i:int, o:term.
+nargs_to_type T 0 T.
+nargs_to_type T N {{lp:T -> lp:T1}} :-
+N1 is N - 1,
+nargs_to_type T N1 T1.
+
 pred translate_prf i:term, o:term, o:term.
+pred translate_prf_fun i:term, o:term, o:term.
+
 pred main_translate_prf i:term, o:term, o:term.
 pred thm_table o:term, o:term, o:term.
 pred nat_thm_table o:term, o:term, o:term.
 
 pred meta_list_to_list i:(list term), o: term.
 meta_list_to_list nil {{nil}}.
-meta_list_to_list uvar _ :- coq.error "invalid input meta_list_to_list called with flexible argument".
 meta_list_to_list [A|Tl] {{lp:A::lp:R}} :- meta_list_to_list Tl R.
+meta_list_to_list uvar _ :- coq.error "invalid input meta_list_to_list called with flexible argument".
 
-pred translate_args i:list term, o:list term, o:list term.
-translate_args nil nil nil.
-translate_args [R|Tl] [Z|TlZ] [Prf|PrfT] :-
-translate_prf R Z Prf,
-translate_args Tl TlZ PrfT.
+pred meta_list_to_proof i:(list term), o:term.
+
+meta_list_to_proof nil {{eq_refl : nil = @map Z R IZR nil}}.
+
+meta_list_to_proof [P | Tl] {{f_equal2 (@cons R) lp:P lp:R}} :- meta_list_to_proof Tl R.
+
+meta_list_to_proof uvar _ :- coq.error "invalid input meta_list_to_proof called with flexible argument".
+
+pred translate_prf_list i:list term, o:list term, o:list term.
+
+translate_prf_list nil nil nil.
+
+translate_prf_list [R|Tl] [Z|TlZ] [Prf|PrfT] :-
+  translate_prf R Z Prf,
+  translate_prf_list Tl TlZ PrfT.
 
 pred say i:term.
 say T :- coq.say {coq.term->string T}.
 
 pred sayL i:list term.
 sayL nil :- coq.say "nil".
-sayL [A|Tl] :- std.do![say A, coq.say "::", sayL Tl].
+sayL [A|Tl] :- std.do![coq.say A, coq.say "::", sayL Tl].
+
+translate_prf T _ _ :-
+coq.say "entering translate_prf",
+say T, fail.
 
 translate_prf (fun N {{nat}} F) (fun N {{nat}} F1)
   T :-
@@ -145,9 +183,20 @@ translate_prf (fun N {{nat}} F) (fun N {{nat}} F1)
 translate_prf (fun M {{R}} Bo) (fun M {{Z}} BoZ) Prf :-
   (pi V VZ H\
   (decl V M {{R}} ,
+  decl VZ _ {{Z}} ,
   translate_prf V VZ H) ==>
   translate_prf (Bo V) (BoZ VZ) (Pf V VZ H),
-  Prf = {{fun (r : R) (z : Z) (h : r = IZR z) => lp:(Pf r z h)}}).
+  Prf = {{fun (r_test : R) (z : Z) (h : r_test = IZR z) => lp:(Pf r_test z h)}}).
+
+translate_prf (fun M {{ty_R lp:NNat}} Bo) (fun M {{ty_R lp:NNat}} BoZ) Prf :-
+  (pi V VZ H\
+  (decl V M {{R}} ,
+  decl VZ _ {{Z}} ,
+  translate_prf V VZ H) ==>
+  translate_prf (Bo V) (BoZ VZ) (Pf V VZ H),
+  Prf = {{fun (r : R) (z : Z) (h : r = IZR z) => lp:(Pf r z h)}})
+  % )
+  .
 
 translate_prf (fun L {{list R}} F) (fun L {{list Z}} F1)
   PF0 :-
@@ -169,8 +218,11 @@ translate_prf (fun L {{list (R -> R)}} F) (fun L {{list (Z -> Z)}} F1)
      PF0 = {{fun (lr : list (R->R)) (lz : list (Z->Z))
        (h : P_trans1 lr IZR lz ) => lp:(PF lr lz h)}}.
 
-translate_prf (fun L {{list (ty_R lp:N)}} F) (fun L {{list (ty_Z lp:N)}} F1)
+translate_prf (fun L {{list lp:T}} F) (fun L {{list (ty_Z lp:N)}} F1)
    PF0 :-
+   type_to_nargs T Nint,
+   int_to_nat Nint N,
+
    (pi Cl1 Cl2 Hll L2 \
    (decl Cl1 L {{list (ty_R lp:N)}},
     decl Cl2 _ {{list (ty_Z lp:N)}},
@@ -179,6 +231,7 @@ translate_prf (fun L {{list (ty_R lp:N)}} F) (fun L {{list (ty_Z lp:N)}} F1)
      translate_prf (F Cl1) (F1 Cl2) (PF Cl1 Cl2 Hll)),
      PF0 = {{fun (lr : list (ty_R lp:N)) (lz : list (ty_Z lp:N))
        (h : P_transN lp:N lr IZR lz ) => lp:(PF lr lz h)}}.
+
 
 translate_prf {{nth lp:K lp:L (id_R 0)}} {{nth lp:K lp:Lz (id_Z 0)}}
   {{private.nth_map (id_Z 0) (id_R 0) IZR lp:Lz lp:L lp:K eq_refl lp:H}} :-
@@ -189,22 +242,68 @@ translate_prf {{nth lp:K lp:L (id_R 1) lp:A_r}} {{nth lp:K lp:Lz (id_Z 1) lp:A_z
   translate_prf L Lz H,
   translate_prf A_r A_z Pa.
 
-translate_prf {{@nil R}} {{@nil Z}} {{eq_refl : nil = @map Z R IZR nil}}.
+translate_prf (app [{{nth}}, _Ty , K , L , {{id_R lp:NNat}} | ArgsR]) 
+(app [{{nth}} , {{ty_Z lp:NNat}}, K , Lz , {{id_Z lp:NNat}} | ArgsZ]) 
+  {{(trf_transN lp:NNat lp:L IZR lp:Lz lp:H) lp:K lp:Az lp:Ar lp:PaL}} :-
+  std.do![
+  coq.say "nth N",
+  say K, say L, sayL ArgsR,
+  say NNat,
+  translate_prf L Lz H,
+  say Lz, say H,
+  coq.typecheck H Ty ok,
+  say Ty,
+  translate_prf_list ArgsR ArgsZ Pa,
+  sayL Pa,
+  meta_list_to_list ArgsZ Az,
+  meta_list_to_list ArgsR Ar,
+  meta_list_to_proof Pa PaL,
+  % std.assert-ok! (coq.typecheck PaL Ty) "oups226",
+  coq.say "oups227",
+  say PaL
+  ].
 
-translate_prf {{@nil (R->R)}} {{@nil (Z->Z)}} {{P_trans1_nil}}.
+
+translate_prf {{@nil R}} {{@nil Z}} {{eq_refl : nil = @map Z R IZR nil}}:- !.
+
+translate_prf {{@nil (R->R)}} {{@nil (Z->Z)}} {{P_trans1_nil}} :- !.
+
+translate_prf {{@nil lp:T}} {{@nil (ty_Z lp:NNat)}} {{P_transN_nil lp:NNat}} :-
+coq.say "nil N",
+type_to_nargs T N,
+int_to_nat N NNat.
 
 translate_prf {{@cons R lp:A lp:L}} {{cons lp:A1 lp:L1}}
   {{f_equal2 (@cons (ty_R 0)) lp:Pfa lp:Pfl}}:-
-  std.do! [
+  !, std.do! [
     translate_prf A A1 Pfa,
     translate_prf L L1 Pfl
   ].
 
-translate_prf {{cons lp:A lp:L}} {{cons lp:A1 lp:L1}}
+translate_prf {{@cons (R->R) lp:A lp:L}} {{cons lp:A1 lp:L1}}
   {{P_trans1_cons lp:A lp:A1 lp:L lp:L1 (proj2 (fun1_trf lp:A lp:A1 IZR) lp:Pfa) lp:Pfl}}:-
-  std.do! [
+  !, std.do! [
     translate_prf A A1 Pfa,
     translate_prf L L1 Pfl
+  ].
+
+translate_prf {{(@cons lp:T) lp:A lp:L}} {{@cons (ty_Z lp:NNat)lp:A1 lp:L1}}
+  {{P_transN_cons lp:NNat lp:A lp:A1 lp:L lp:L1 
+  (proj2 (@funN_trf lp:NNat lp:A lp:A1 IZR) lp:Pfa) lp:Pfl}}:-
+  !, std.do! [
+    coq.say "cons N",
+    type_to_nargs T N,
+    int_to_nat N NNat,
+    say NNat,
+    translate_prf A A1 Pfa,
+    coq.say "test",
+    translate_prf L L1 Pfl,
+    coq.say "A",
+    say A,
+    coq.say "A1",
+    say A1,
+    coq.say "Pfa",
+    say Pfa,
   ].
 
 translate_prf {{IZR lp:A}} {{lp:A}} {{eq_refl: IZR lp:A = IZR lp:A}}.
@@ -292,13 +391,15 @@ translate_prf (app [F, A, B, C, D]) (app [F1, A1, B1, C1, D1])
   translate_prf C C1 PFRC,
   translate_prf D D1 PRFD,
   ].
+
 translate_prf (app [F | Args]) (app [F1 | Args1])
   {{private.IZR_mapN lp:N lp:F lp:F1 lp:PFF1 lp:LArgs lp:LArgs1 lp:LPrf}}
   :-
   std.do! [
-  coq.say "aioajizljaiol",
+  coq.say "app F N",
   coq.typecheck F Ty ok,
   coq.say "Ty",
+  say F,
   say Ty,
   type_to_nargs Ty Nint,
   int_to_nat Nint N,
@@ -309,13 +410,14 @@ translate_prf (app [F | Args]) (app [F1 | Args1])
   coq.say "LArgs",
   say LArgs,
   thm_table F F1 PFF1,
-  translate_args Args Args1 PRFArgs,
+  translate_prf_list Args Args1 PRFArgs,
   meta_list_to_list Args1 LArgs1,
 coq.say "Args1",
   sayL Args1,
   coq.say "Args1",
   say LArgs1,
-  meta_list_to_list PRFArgs LPrf,
+  meta_list_to_proof PRFArgs LPrf,
+  say LPrf
   ].
 }}.
 
@@ -432,15 +534,37 @@ main_translate_prf1
      (nat_rect_list 
         lp:L1 lp:L lp:F1 lp:F
         (Z.abs_nat z)
-        (fun (i : nat) (x : Z) =>
+        (* (fun (i : nat) (x : Z) =>
            match i return nth i lp:L (id_R 1) (IZR x) = IZR (nth i lp:L1 (id_Z 1) x) with
-            | 0 =>  (lp:P 0%nat x)
+            | 0 =>  (lp:LP 0%nat x)
             | S p => (nth_overflow_1 (nth 0 lp:L (id_R 1)) (nth 0 lp:L1 (id_Z 1)) p x)
-            end)
+            end) *)
+            lp:LP
         lp:FPRF)}} :-
       Ty = {{list (R -> R)}},
       std.do! [
-      translate_prf L L1 P,
+      translate_prf L L1 LP,
+      translate_prf F F1 FPRF
+    ].
+
+main_translate_prf1
+  L ((fun _N {{nat}} c\ (fun _N1 Ty _)) as F) L1 F1
+  {{fun _ : R => fun z : Z =>
+     (nat_rect_list_N lp:N
+        lp:L1 lp:L lp:F1 lp:F
+        (Z.abs_nat z)
+        (fun (i : nat) (x : Z) =>
+           match i return nth i lp:L (id_R lp:N) (IZR x) = IZR (nth i lp:L1 (id_Z lp:N) x) with
+            | 0 =>  (lp:LP 0%nat x)
+            | S p => (nth_overflow_1 (nth 0 lp:L (id_R lp:N)) (nth 0 lp:L1 (id_Z lp:N)) p x)
+            end)
+        lp:LP
+        lp:FPRF)}} 
+      :-
+      type_to_nargs Ty Nint,
+      int_to_nat Nint N,
+      std.do! [
+      translate_prf L L1 LP,
       translate_prf F F1 FPRF
     ].
 
@@ -452,28 +576,10 @@ main_translate_prf1
        (Z.abs_nat z) eq_refl lp:FPRF)}} :-
     std.do! [
       translate_prf L L1 _,
+      coq.say "coucou",
       translate_prf F F1 FPRF
     ].
 
-main_translate_prf1
-  L ((fun _N {{nat}} c\ (fun _N1 Ty _)) as F) L1 F1
-  {{fun N : R => fun z : Z =>
-     (nat_rect_list_N lp:N
-        lp:L1 lp:L lp:F1 lp:F
-        (Z.abs_nat z)
-        (fun (i : nat) (x : Z) =>
-           match i return nth i lp:L (id_R lp:N) (IZR x) = IZR (nth i lp:L1 (id_Z 1) x) with
-            | 0 =>  (lp:P 0%nat x)
-            | S p => (nth_overflow_1 (nth 0 lp:L (id_R lp:N)) (nth 0 lp:L1 (id_Z lp:N)) p x)
-            end)
-        lp:FPRF)}} 
-      :-
-      type_to_nargs Ty Nint,
-      int_to_nat Nint N,
-      std.do! [
-      translate_prf L L1 P,
-      translate_prf F F1 FPRF
-    ].
 
 main_translate_prf
   {{fun (n : R) =>
@@ -508,7 +614,6 @@ main_translate_prf
            lp:Fz (Z.abs_nat x)) (id_Z 1)}},
   std.assert-ok! (coq.typecheck F {{Z->Z->Z}})
     "failed to typecheck mirror function",
-
   Prf1 =
     {{
       fun (r : R) (z : Z) (nzq : r = IZR z) =>
@@ -535,16 +640,15 @@ main_translate_prf
            lp:Fz (Z.abs_nat x)) (id_Z lp:N)}},
   std.assert-ok! (coq.typecheck F {{ty_Z (S lp:N)}})
     "failed to typecheck mirror function",
-
   Prf1 =
     {{
       fun (r : R) (z : Z) (nzq : r = IZR z) =>
-      private.IZR_map1'  (
+      private.IZR_mapN  (
        (eq_ind_r
          (fun x : nat =>
-          P_trans1
-          (nat_rect _ lp:L lp:Fnstep x) IZR
-          (nat_rect _ lp:Lz lp:Fz (Z.abs_nat z))
+          P_transN lp:N
+          (nat_rect (fun _ : nat => list (ty_R lp:N)) lp:L lp:Fnstep x) IZR
+          (nat_rect (fun _ : nat => list (ty_Z lp:N)) lp:Lz lp:Fz (Z.abs_nat z))
           )
         (lp:Prf r z)
           (private.IRN_Z_abs_nat _ _ nzq)) 0%nat)
@@ -585,6 +689,13 @@ main L :-
   coq.error "Usage: Elpi mirror_recursive_definition Name.\n instead received: " L.
 }}.
 
+Recursive (def bin2 such that 
+bin2 0 = (fun m => at_x 0 1 0 m) /\ 
+forall n, Rnat (n-1) -> bin2 n = 
+(fun m => at_x 0 1 ((bin2 ((n-1))) (m-1) + (bin2 (n-1)) m) m)).
+Print bin2.
+(* Fail Elpi mirror_recursive_definition bin. *)
+Elpi mirror_recursive_definition bin2.
 Elpi Query lp:{{
 
   prf_stmt {{ty_Z 3}} Fr Fz K,
@@ -593,6 +704,13 @@ Elpi Query lp:{{
 
 }}.
 
+Elpi Query lp:{{
+translate_prf {{@cons (R->R) (fun r :R => r)  (@nil (R->R))}} Result Prf,
+coq.typecheck Prf Ty ok,
+say Ty
+
+}}.
+Check fun x : (P_trans1 ((fun r : R => r) :: nil) IZR ((fun r : Z => r) :: nil)) => x 2%nat.
 Recursive (def foo1 such that
     foo1 0 = 0 /\
     forall n, Rnat (n-1) -> foo1 n = foo1 (n-1)).
@@ -631,6 +749,7 @@ Recursive (def fib such that
     fib 1 = 1 /\
     forall n : R, Rnat (n - 2) -> 
     fib n = fib (n - 2) + fib (n - 1)).
+    Elpi mirror_recursive_definition fib.
 Print fib.
 
 Definition fib_Z_mirror' := fun x : Z => nth 0 (nat_rect (fun _ : nat => list Z) (0%Z ::1%Z :: nil) (fun (_ : nat) (v : list Z) => nth 1 v (id_Z 0) :: (nth 0 v (id_Z 0) + nth 1 v (id_Z 0))%Z ::nil)
@@ -654,19 +773,19 @@ Recursive (def tail_addmul such that
   tail_addmul 0 = (fun m r x => r) /\
   forall n, Rnat (n-1) -> 
   tail_addmul n = (fun m r x  => tail_addmul (n - 1) m (m + r) x)).
+Print tail_addmul.
 
-Elpi Trace Browser.
+(* Elpi Trace Browser. *)
 
-Fail Elpi Query lp:{{
+ Elpi Query lp:{{
   (pi Msg Data \ std.debug-print Msg Data :- coq.say Msg Data,!) =>
   std.do! [
   coq.locate "tail_addmul" (const FGR),
   coq.env.const-body FGR (some Bo),
   main_translate_prf Bo _T1 Prf,
   say Prf,
-
-  ]
-
+   std.assert-ok!(coq.typecheck Prf TP) "oups",
+]
 }}.
 Elpi mirror_recursive_definition fib.
 Theorem a : forall (n : R) (z : Z), n = IZR z -> fib (Rabs n) = IZR (fib_Z_mirror z).
