@@ -8,7 +8,7 @@ type_to_nargs {{R}} 0.
 
 pred nargs_to_def_val i:int, o:term.
 
-nargs_to_def_val N {{id_R lp:NasNat}} :-
+nargs_to_def_val N {{cst_ R 0%R lp:NasNat}} :-
 int_to_nat N NasNat.
 
 % sorting a list of integers removing duplicates

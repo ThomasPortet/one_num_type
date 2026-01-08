@@ -1,3 +1,5 @@
+
+
 From elpi Require Import elpi.
 Require Import List Reals ClassicalEpsilon Lia Lra.
 From OneNum.srcElpi Extra Dependency "translate_prf.elpi" as translate_prf.
@@ -14,6 +16,13 @@ Set Warnings "+notation-overridden".
 
 
 Open Scope R_scope.
+
+Fixpoint IZR_ty {n} : ty_ Z n -> ty_ R n :=
+  match n with
+  | 0 => fun z => IZR z
+  | S p => fun f => fun r => IZR_ty (f (IRZ r))
+  end.  
+
 Lemma add_compute : forall x y, Rplus (IZR x) (IZR y) = IZR (Z.add x y).
 Proof.
 exact (fun x y => eq_sym (plus_IZR x y)).
@@ -42,7 +51,34 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma Rpow_0_l : forall a : R, a <> 0%R -> (0 ^ a)%R = 0%R.
+Proof.
+intros a aNN.
+unfold Rpow.
+simpl.
+Admitted.
+(* unfold pow.
+simpl.
+case n.
+easy. *)
 
+Lemma pow_compute : forall x y, (0<=y)%Z -> Rpow (IZR x) (IZR y) = IZR (Z.pow x y).
+Proof.
+intros z1 z2 z20.
+unfold Rpow.
+destruct z2.
+    rewrite IRN0.
+    apply pow_O.
+  simpl.
+  rewrite pow_IZR. apply IZR_eq.
+  rewrite IRN_IZR.
+  simpl.
+  rewrite Z.pow_pos_fold.
+  change (Pos.to_nat p) with (Z.to_nat (Z.pos p)).
+  rewrite Z2Nat.id; easy.
+easy.
+Qed.
+  
 Lemma abs_compute : forall x, Rabs (IZR x) = IZR (Z.abs x).
 Proof.
 exact (fun x => eq_sym (abs_IZR x)).
@@ -73,6 +109,13 @@ Definition at_x (a b c : R) := fun x => if (Req_bool x a) then b else (c).
 
 Definition at_x_Z (a b c : Z) := fun x => if (Zeq_bool x a) then b else c.
 
+Definition Rinf_bool (x y : R) := if (Rlt_dec x y) then true else false.
+
+
+Definition at_x' {n} a (b c : ty_ R n):= fun x => if (Rinf_bool x a) then b else c.
+
+Definition at_x_Z' {n} a (b c : ty_ Z n):= fun x => if (Z.ltb x a) then b else c.
+
 Lemma at_x_compute : forall a b c x, at_x (IZR a) (IZR b) (IZR c) (IZR x) = IZR (at_x_Z a b c x).
 Proof.
   intros.
@@ -81,20 +124,37 @@ Proof.
   rewrite <-eq_bool_compute.
   now destruct (Req_bool (IZR x) (IZR a)).
 Qed.
+Definition nat1 := nat.
 
+Lemma at_x'_compute : forall n (a:Z) (b c:ty_ Z n),
+  forall x, ((at_x' (IZR a) (IZR_ty b) (IZR_ty c)) (IZR x)) = IZR_ty (at_x_Z' a b c x).
+Proof.
+  intros n a b c x.
+  unfold at_x', at_x_Z'.
+  unfold Rinf_bool.
+  
+  destruct (Rlt_dec (IZR x) (IZR a)) as [r|nr].
+  - destruct (x <? a)%Z eqn:Hz; auto.
+    apply Z.ltb_nlt in Hz.
+    apply lt_IZR in r.
+    contradiction.
+  - destruct (x <? a)%Z eqn:Hz; auto.
+    apply Z.ltb_lt in Hz.
+    apply IZR_lt in Hz.
+    contradiction.
+Qed.
 
 Definition IZR2 (f : Z -> Z) :=
 fun r : R =>
   IZR(f (IRZ r)).
 
-
-Lemma nil_2 :  nil = @map (ty_Z 1) (ty_R 1) IZR2 nil.
+Lemma nil_2 :  nil = @map (ty_ Z 1) (ty_ R 1) IZR2 nil.
 Proof.
   unfold IZR2.
   now simpl.
 Qed.
 
-Definition nat1 := nat.
+
 
 Elpi Db R_translate.db lp:{{ }}.
 Elpi Accumulate R_translate.db File tools.
