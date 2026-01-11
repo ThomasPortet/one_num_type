@@ -1,5 +1,5 @@
-Require Import List Reals ClassicalEpsilon Lia Lra.
-Require Import Wellfounded.
+From Stdlib Require Import List Reals ClassicalEpsilon Lia Lra.
+From Stdlib Require Import Wellfounded.
 
 Open Scope R_scope.
 
@@ -395,6 +395,12 @@ Ltac from_pow :=
         replace (pow x n) with (Rpow x (IZR v));
          [ | rewrite (Rpow_convert_Z x v); easy]
     end).
+
+  Lemma Zeq_bool_IZR : forall c1 c2, IZR c1 = IZR c2 ->
+    (c1 =? c2)%Z = true.
+Proof.
+  exact(fun x y h => proj2 (Z.eqb_eq x y) (eq_IZR _ _ h)).
+Qed.
 
 (* Adding preprocessing and post processing to leverage the knowledge
   of pow.*)

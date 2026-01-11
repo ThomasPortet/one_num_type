@@ -1,6 +1,6 @@
 From elpi Require Import elpi.
-Require Import List Reals ClassicalEpsilon Lia Lra.
-Require Import Wellfounded.
+From Stdlib Require Import List Reals ClassicalEpsilon Lia Lra.
+From Stdlib Require Import Wellfounded.
 From OneNum.srcElpi Extra Dependency "tools.elpi" as tools.
 From OneNum.srcElpi Extra Dependency "recursive.elpi" as recursive.
 

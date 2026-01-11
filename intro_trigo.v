@@ -180,13 +180,13 @@ Axiom first_cos_root : forall x, 0 <= x < Pi / 2 -> 0 < cos x.
 
 Axiom tan : R -> R.
 
-Axiom tan_val : forall x, (forall n, Rnat n -> x <> Pi / 2 + n * Pi) -> 
+Axiom tan_val : forall x, (forall n, Rint n -> x <> Pi / 2 + n * Pi) -> 
   tan x = sin x / cos x.
 
-Axiom tan_derivable : forall x, (forall n, Rnat n -> x <> Pi / 2 + n * Pi) ->
+Axiom tan_derivable : forall x, (forall n, Rint n -> x <> Pi / 2 + n * Pi) ->
   derivable tan x.
 
-Axiom tan_derive : forall x, (forall n, Rnat n -> x <> Pi / 2 + n * Pi) ->
+Axiom tan_derive : forall x, (forall n, Rint n -> x <> Pi / 2 + n * Pi) ->
   derive tan x = 1 + tan x ^ 2.
 
 End simple_trigo.
@@ -1289,20 +1289,170 @@ Proof.  apply Rint_Z. Qed.
 Lemma floor_interval x : floor x <= x < floor x + 1.
 Proof. apply Zfloor_bound. Qed.
 
-Lemma cos_non_0 x : (forall n, Rnat n -> x <> Pi / 2 * n * Pi) ->
+(* missing lemma to make handling of multiplication and division comfortable*)  
+Lemma mult_div_transfer_le y x z : 0 < y -> x * y <= z <-> x <= z / y.
+Proof.
+intros ygt0.
+split; intros known.
+  apply (Rmult_le_reg_r y);[easy | ].
+  replace (z / y * y) with z by (field; lra).
+  easy.
+apply (Rmult_le_reg_r (/ y)).
+  apply Rinv_0_lt_compat; easy.
+replace (x * y * / y) with x by (field; lra).
+easy.
+Qed.
+
+Lemma mult_div_transfer_le2 y x z : 0 < y -> x / y <= z <-> x <= z * y.
+Proof.
+intros ygt0; split; intros known.
+  apply (Rmult_le_reg_r (/ y)).
+    apply Rinv_0_lt_compat; easy.
+  replace (z * y * / y) with z by (field; lra).
+  easy.
+apply (Rmult_le_reg_r y).
+  easy.
+replace (x / y * y) with x by (field; lra).
+easy.
+Qed.
+
+Lemma mult_div_transfer_lt x y z : 0 < y -> x * y < z <-> x < z / y.
+Proof.
+intros ygt0.
+split; intros known.
+  apply (Rmult_lt_reg_r y);[easy | ].
+  replace (z / y * y) with z by (field; lra).
+  easy.
+apply (Rmult_lt_reg_r (/ y)).
+  apply Rinv_0_lt_compat; easy.
+replace (x * y * / y) with x by (field; lra).
+easy.
+Qed.
+
+Lemma mult_div_transfer_lt2 x y z : 0 < y -> x / y < z <-> x < z * y.
+Proof.
+intros ygt0.
+split; intros known.
+  apply (Rmult_lt_reg_r (/y)).
+    apply Rinv_0_lt_compat; easy.
+  replace (z * y * / y) with z by (field; lra).
+  easy.
+apply (Rmult_lt_reg_r y);[lra |].
+replace (x / y * y) with x by (field; lra).
+easy.
+Qed.
+
+Lemma cos_non_0 x : (forall n, Rint n -> x <> Pi / 2 + n * Pi) ->
   cos x <> 0.
 Proof.
 intros defd.
-set (m := floor x / (2 * Pi)).
+assert (pi_gt0 := Pi_gt0).
+set (m := floor (x / (2 * Pi))).
+assert (nat_m : Rint m).
+  now unfold m; apply floor_int.
 set (y := x - m * (2 * Pi)).
 assert (0 <= y < 2 * Pi).
   unfold y.
   enough (m * (2 * Pi) <= x < (m + 1) * (2 * Pi)) by lra.
-  assert (tmp := Pi_gt0).
   enough (m <= x / (2 * Pi) < (m + 1)).
-    Search ( _ * _ <= _) (_ <= _ / _).
-Search "rchim".
-set (m := integer_part )
-Lemma tan_derive_2 x : (forall n, Rnat n -> x <> Pi / 2 + n * Pi) -> 
+    split;[rewrite mult_div_transfer_le | ].
+        tauto.
+      lra.
+  rewrite <- mult_div_transfer_lt2.
+    lra.
+  lra.
+apply floor_interval.
+assert (xy : x = y + 2 * m * Pi).
+  now unfold y; ring.
+assert (cos_xy : cos x = cos y).
+  rewrite xy.
+  rewrite cos_periodic.
+    easy.
+  now apply floor_int.
+rewrite cos_xy.
+assert ((0 <= y /\ y <= Pi / 2) \/
+        (Pi / 2 < y /\ y < 2 * Pi)) as [below_half_pi | above_half_pi] by lra.
+  assert (y < Pi / 2 \/ y = Pi /2) as [below_strict | at_Pi_2] by lra.
+    enough (0 < cos y) by lra.
+    apply first_cos_root.
+    lra.
+  destruct (defd (2 * m)).
+    solve_Rnat.
+  rewrite xy, at_Pi_2; ring.
+assert (Pi/2 < y <= 3 * Pi / 2 \/ 3 * Pi / 2 < y < 2 * Pi) as
+  [below_3_half | above_3_half] by lra.
+  assert (y < 3 * Pi / 2 \/ y = 3 * Pi / 2) as [below_strict | at_3Pi_2]
+    by lra.
+    enough (cos y < 0) by lra.
+    replace (cos y) with (- (- (cos y))) by ring.
+    rewrite <- cos_sub_Pi.
+    enough (0 < cos (y - Pi)) by lra.
+    assert (y <= Pi \/ Pi < y) as [below_Pi | above_Pi] by lra.
+      rewrite <- par_cos.
+      apply first_cos_root.
+      lra.
+    apply first_cos_root.
+    lra.
+  destruct (defd (2 * m + 1)).
+    solve_Rnat.
+  rewrite xy, at_3Pi_2; field.
+enough (0 < cos y) by lra.
+rewrite <- (cos_periodic y (-1));[ | solve_Rnat].
+rewrite <- par_cos.
+apply first_cos_root.
+lra.
+Qed.
+
+Lemma tan_derive_2 x : (forall n, Rint n -> x <> Pi / 2 + n * Pi) -> 
   derive tan x = 1 / cos x ^ 2.
 Proof.
+intros xdefd.
+start_with (derive tan x).
+calc_LHS (1 + tan x ^ 2).
+  now apply tan_derive.
+calc_LHS (1 + (sin x / cos x) ^ 2).
+  now rewrite tan_val.
+calc_LHS ((cos x ^ 2 + sin x ^ 2) / cos x ^ 2).
+  now field; apply cos_non_0.
+calc_LHS (1 / cos x ^ 2).
+  now rewrite unit_circle.
+easy.
+Qed.
+
+Recursive (def Viete_aux such that
+             Viete_aux 0 = sqrt 2 /\
+             forall n, Rnat (n - 1) -> 
+             Viete_aux n = sqrt (2 + Viete_aux (n - 1))).
+
+Lemma cos_2_exp_n n : Rnat n -> cos (Pi / 2 ^ (n + 2)) =
+  Viete_aux n / 2 ^ (n + 1).
+Proof.
+induction 1.
+  start_with (cos (Pi / 2 ^ (0 + 2))).
+  calc_LHS (cos (Pi / 2 ^ 2)).
+    now replace (0 + 2) with 2 by ring.
+  calc_LHS (cos (Pi / (2 * 2))).
+    now rewrite pow_2_expand.
+  calc_LHS (cos (Pi / 4)).
+    now replace (2 * 2) with 4 by ring.
+  calc_LHS (sqrt 2 / 2).
+    now rewrite cos_Pi_fourth.
+  symmetry.
+  start_with (Viete_aux 0 / 2 ^ (0 + 1)).
+  calc_LHS (Viete_aux 0 / 2 ^ 1).
+    now replace (0 + 1) with 1 by ring.
+  calc_LHS (Viete_aux 0 / 2).
+    now rewrite Rpow1.
+  calc_LHS (sqrt 2 / 2).
+    now rewrite (proj1 (Viete_aux_eqn)).
+  easy.
+assert (rhs_step : Viete_aux (x + 1) / 2 ^ (x + 1 + 1) =
+          sqrt (2 + (Viete_aux x / 2 ^ (x + 1))) / 2).
+
+
+    
+    now rewrite Rpow1.
+  calc_LHS (1 / sqrt 2).
+    Search cos Pi 2.
+  easy.
+  

@@ -1,5 +1,5 @@
 From elpi Require Import elpi.
-Require Import List Reals ClassicalEpsilon Lia Lra.
+From Stdlib Require Import List Reals ClassicalEpsilon Lia Lra.
 From OneNum.srcElpi Extra Dependency "translate_prf.elpi" as translate_prf.
 From OneNum.srcElpi Extra Dependency "compute.elpi" as compute.
 From OneNum.srcElpi Extra Dependency "gen.elpi" as gen.
@@ -51,12 +51,12 @@ Qed.
 Definition Req_bool (x y : R) := if (Req_dec_T x y) then true else false.
 Notation "x =? y" := (Req_bool x y) : R_scope.
 
-Lemma eq_bool_compute : forall x y, Req_bool (IZR x) (IZR y) = (Zbool.Zeq_bool x y).
+Lemma eq_bool_compute : forall x y, Req_bool (IZR x) (IZR y) = (Z.eqb x y).
 Proof.
   intros.
   unfold Req_bool.
   destruct Req_dec_T as  [eqR|neqR] .
-    now rewrite (Zeq_bool_IZR x y).
+    now symmetry; rewrite Z.eqb_eq; apply eq_IZR.
   symmetry.
   rewrite Z.eqb_neq.
   now apply Zeq_bool_IZR_neq.
@@ -70,9 +70,10 @@ fun n => match n with
 
 Definition at_x (a b c : R) := fun x => if (Req_bool x a) then b else (c).
 
-Definition at_x_Z (a b c : Z) := fun x => if (Zbool.Zeq_bool x a) then b else c.
+Definition at_x_Z (a b c : Z) := fun x => if (Z.eqb x a) then b else c.
 
-Lemma at_x_compute : forall a b c x, at_x (IZR a) (IZR b) (IZR c) (IZR x) = IZR (at_x_Z a b c x).
+Lemma at_x_compute :
+  forall a b c x, at_x (IZR a) (IZR b) (IZR c) (IZR x) = IZR (at_x_Z a b c x).
 Proof.
   intros.
   unfold at_x.
