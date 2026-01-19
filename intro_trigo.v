@@ -88,34 +88,6 @@ apply (Rmult_le_reg_r y).
 rewrite div_cancel_r; lra.
 Qed.
 
-Lemma Rpow_lt x y : 0 < x -> 0 < x ^ y.
-Proof.  apply pow_lt. Qed.
-
-Lemma Rpow_le x y : 0 <= x -> 0 <= x ^ y.
-Proof.  apply pow_le. Qed.
-
-Lemma square_pos x : x <> 0 -> 0 < x ^ 2.
-Proof.
-intros xn0.
-assert (x < 0 \/ 0 < x) as [xneg | xpos] by lra.
-  replace (x ^ 2) with ((- x) ^ 2) by ring.
-  apply Rpow_lt; lra.
-apply Rpow_lt; lra.
-Qed.
-
-Lemma square_ge0 x : 0 <= x ^ 2.
-Proof.
-assert (x < 0 \/ 0 <= x) as [xneg | xnneg] by lra.
-  replace (x ^  2) with ((-x) ^  2) by ring.
-  apply Rpow_le; lra.
-now apply Rpow_le.
-Qed.
-
-Lemma Rpow_incr x y z : 0 <= x <= y -> Rpow x z <= Rpow y z.
-Proof.
-apply pow_incr.
-Qed.
-
 (* We believe that in a mathematical class, we cannot assume sqrt to be defined
   for all real number, we should rather respect that the value is well defined
   only for positive real numbers. sqrt_pos should not be used in our context,
@@ -348,23 +320,29 @@ try (match goal with
   end).
 
 Ltac trinom_with_coeff_and_hypotheses A B C Thm First_Root Second_Root :=
+  idtac "entering trinom_with_c_a_h" A B C;
+  match goal with | |- ?W => idtac W end;
   match goal with
   | discr_ge0 : 0 <= ?d ,
     equa : ?p = 0 |- ?X = ?V1 \/ ?X = ?V2 =>
+    idtac "debug point -1" p X;
     let h_a := fresh "lead_coeff_eq" in
     let h_b := fresh "discr_eq" in
     let h_c := fresh "equa_eq" in
     let h_d := fresh "first_root" in
     let h_e := fresh "second_root"in
     let h_tmp := fresh "tmp" in
+    idtac "debug point 1";
     assert (h_a : A <> 0 ) by (lra ||
       fail 1 "Working with equation" p "= 0"
         "You need to provide a proof that" A "is not 0");
     let D := constr:(B * B - 4 * A * C) in
-    assert (h_b : d = B * B - 4 * A * C) by (field; (easy || lra));
-    assert (h_c : p = A * X ^ 2 + B * X + C) by (field; (easy || lra));
+    assert (h_b : d = B * B - 4 * A * C) by (field; (easy || lra ||
+      fail 2 "failed to check discriminant identity"));
+    assert (h_c : p = A * X ^ 2 + B * X + C) by (field; (easy || lra
+      || fail 2 "failed to check trinom equality"));
     assert (h_d : V1 = First_Root)
-      ;
+      ; idtac "debug point 2";
       [(( (* if field_simplify produces side goals, 
             we want them to be solved by easy or lra*)
         field_simplify D;[ idtac | (easy || lra) ..]);
@@ -391,7 +369,6 @@ Ltac trinom_with_coeff_and_hypotheses A B C Thm First_Root Second_Root :=
                    try rewrite <- h_c; easy]
   end.
 
-
 Ltac trinom_with_coeff A B C :=
   let D := constr:(B * B - 4 * A * C) in
   let First_Root := constr:((- B - sqrt D) / (2 * A)) in
@@ -401,12 +378,14 @@ Ltac trinom_with_coeff A B C :=
   | discr_ge0 : 0 <= ?d |- _ =>
     assert (d_h : 0 <= D) by
      (replace D with d by field; assumption);
+     idtac "recognized user given discriminant";
      clear discr_ge0
-  | |- _ => (assert (d_h : 0 <= D) by lra ||
-              fail 2 "failed to prove that the discriminant" D "is non negative")
+  | |- _ => (assert (d_h : 0 <= D) by (lra ||
+              fail 2 "failed to prove that the discriminant" D "is non negative"))
   end
   ;
     (assert_succeeds (assert (0 < A) by lra);
+    idtac "calling trinom_w_c_a_h with positive head coefficient";
   (trinom_with_coeff_and_hypotheses A B C trinom First_Root Second_Root)
     )
   ||
@@ -631,6 +610,52 @@ calc_LHS (cos 0 ^ 2 - sin 0 ^ 2).
 calc_LHS (cos 0 ^ 2 + sin 0 ^ 2).
   end_calculate.
 apply unit_circle.
+Qed.
+
+(* This proof is unsatisfactory because it adapts to the limited
+  reasoning capability of lra, *)
+Lemma cos_bounds x : -1 <= cos x <= 1.
+Proof.
+assert (main : ~ 1 < cos x ^ 2).
+  intros abs.
+  assert (tmp := unit_circle x).
+  assert (0 <= sin x ^ 2) by apply square_ge0.
+  lra.
+assert (cos x < - 1 \/ -1 <= cos x) as [badbelow | above] by lra.
+  destruct main.
+  assert (cos x ^ 2 = 1 + 2 * (- 1 - cos x) + (- 1 - cos x) ^ 2)
+      by ring.
+  assert (0 < -1 - cos x) by lra.
+  assert (0 <= (-1 - cos x) ^ 2) by apply square_ge0.
+  lra.
+assert (1 < cos x \/ cos x <= 1) as [below | badabove] by lra.
+  destruct main.
+  assert (cos x ^ 2 = 1 + 2 * (cos x - 1) + (cos x - 1) ^ 2) by ring.
+  assert (0 <= (cos x - 1) ^ 2) by apply square_ge0.
+  lra.
+lra.
+Qed.
+
+Lemma sin_bounds x : -1 <= sin x <= 1.
+Proof.
+assert (main : ~ 1 < sin x ^ 2).
+  intros abs.
+  assert (tmp := unit_circle x).
+  assert (0 <= cos x ^ 2) by apply square_ge0.
+  lra.
+assert (sin x < - 1 \/ -1 <= sin x) as [badbelow | above] by lra.
+  destruct main.
+  assert (sin x ^ 2 = 1 + 2 * (- 1 - sin x) + (- 1 - sin x) ^ 2)
+      by ring.
+  assert (0 < -1 - sin x) by lra.
+  assert (0 <= (-1 - sin x) ^ 2) by apply square_ge0.
+  lra.
+assert (1 < sin x \/ sin x <= 1) as [below | badabove] by lra.
+  destruct main.
+  assert (sin x ^ 2 = 1 + 2 * (sin x - 1) + (sin x - 1) ^ 2) by ring.
+  assert (0 <= (sin x - 1) ^ 2) by apply square_ge0.
+  lra.
+lra.
 Qed.
 
 Lemma cos_double x : cos (2 * x) = cos x ^ 2 - sin x ^ 2.
@@ -1280,68 +1305,6 @@ calc_LHS (a * cos theta + b * sin theta).
 easy.
 Qed.
 
-(* This should be hidden in R_subsets *)
-Definition floor (x : R) : R := IZR (Zfloor x).
-
-Lemma floor_int x : Rint (floor x).
-Proof.  apply Rint_Z. Qed.
-
-Lemma floor_interval x : floor x <= x < floor x + 1.
-Proof. apply Zfloor_bound. Qed.
-
-(* missing lemma to make handling of multiplication and division comfortable*)  
-Lemma mult_div_transfer_le y x z : 0 < y -> x * y <= z <-> x <= z / y.
-Proof.
-intros ygt0.
-split; intros known.
-  apply (Rmult_le_reg_r y);[easy | ].
-  replace (z / y * y) with z by (field; lra).
-  easy.
-apply (Rmult_le_reg_r (/ y)).
-  apply Rinv_0_lt_compat; easy.
-replace (x * y * / y) with x by (field; lra).
-easy.
-Qed.
-
-Lemma mult_div_transfer_le2 y x z : 0 < y -> x / y <= z <-> x <= z * y.
-Proof.
-intros ygt0; split; intros known.
-  apply (Rmult_le_reg_r (/ y)).
-    apply Rinv_0_lt_compat; easy.
-  replace (z * y * / y) with z by (field; lra).
-  easy.
-apply (Rmult_le_reg_r y).
-  easy.
-replace (x / y * y) with x by (field; lra).
-easy.
-Qed.
-
-Lemma mult_div_transfer_lt x y z : 0 < y -> x * y < z <-> x < z / y.
-Proof.
-intros ygt0.
-split; intros known.
-  apply (Rmult_lt_reg_r y);[easy | ].
-  replace (z / y * y) with z by (field; lra).
-  easy.
-apply (Rmult_lt_reg_r (/ y)).
-  apply Rinv_0_lt_compat; easy.
-replace (x * y * / y) with x by (field; lra).
-easy.
-Qed.
-
-Lemma mult_div_transfer_lt2 x y z : 0 < y -> x / y < z <-> x < z * y.
-Proof.
-intros ygt0.
-split; intros known.
-  apply (Rmult_lt_reg_r (/y)).
-    apply Rinv_0_lt_compat; easy.
-  replace (z * y * / y) with z by (field; lra).
-  easy.
-apply (Rmult_lt_reg_r y);[lra |].
-replace (x / y * y) with x by (field; lra).
-easy.
-Qed.
-
 Lemma cos_non_0 x : (forall n, Rint n -> x <> Pi / 2 + n * Pi) ->
   cos x <> 0.
 Proof.
@@ -1419,13 +1382,65 @@ calc_LHS (1 / cos x ^ 2).
 easy.
 Qed.
 
+End trigo_facts.
+
+Module Viete (D : simple_trigo).
+
+Module T := trigo_facts D.
+Import D.
+Import T.
+
+(* Starting here an exercise to prove Viete's formula
+  Pi = 2 * 2 / sqrt 2 * 2 / sqrt (2 + sqrt 2) *
+       2 / sqrt (2 + sqrt (2 + sqrt 2)) *)
+
+(* First define a recursive function to describe the
+  nested square root constructs. *)
 Recursive (def Viete_aux such that
              Viete_aux 0 = sqrt 2 /\
              forall n, Rnat (n - 1) -> 
              Viete_aux n = sqrt (2 + Viete_aux (n - 1))).
 
+(* Section 1: cos (Pi / 2 ^ (n + 2)) = Viete_aux n / 2 *)
+Lemma cos_half_formula x : 0 <= x < Pi / 2 ->
+  cos (x / 2) = sqrt (2 + 2 * cos x) / 2.
+Proof.
+intros xcond.
+assert (tri : 2 * cos (x / 2) ^ 2 - (1 + cos x) = 0).
+  assert (tmp := cos_double_1 (x / 2)).
+  replace (2 * (x / 2)) with x in tmp by field.
+  lra.
+assert (2 * cos (x / 2) ^ 2 + 0 * cos (x / 2) +
+ (- (1 + cos x)) = 0) by lra.
+clear tri.
+assert (tmp1 : -1 <= cos x <= 1) by apply cos_bounds.
+assert (0 <= 0 * 0 - 4 * 2 * - (1 + cos x)).
+  assert (tmp := cos_bounds x); lra.
+move H after H0.
+(* TODO : trinom_Fast still needs improving to recognize equalities with sqrt
+  involved. *)
+assert (cos (x / 2) = - sqrt (0 * 0 - 4 * 2 * -(1 + cos x)) / 4 \/
+   cos (x / 2) = sqrt (0 * 0 - 4 * 2 * -(1 + cos x)) / 4) as [wrong_value | good_value].
+  trinom_with_coeff 2 0 (- (1 + cos x)).
+  replace (0 * 0 -4 * 2 * - (1 + cos x)) with (8 * (1 + cos x)) in wrong_value by ring.
+  assert (0 <= sqrt (8 * (1 +  cos x))) by apply sqrt_pos.
+  assert (0 < cos (x / 2)) by (apply first_cos_root; lra).
+  lra.
+start_with (cos (x / 2)).
+calc_LHS (sqrt (0 * 0 - 4 * 2 * - (1 + cos x)) / 4).
+  lra.
+calc_LHS (sqrt (4 * (2 + 2 * cos x)) / 4).
+  now replace (0 * 0 - 4 * 2 * - (1 + cos x)) with (4 * (2 + 2 * cos x)) by ring.
+calc_LHS (sqrt 4 * sqrt (2 + 2 * cos x) / 4).
+  rewrite sqrt_mult_alt;[ | lra].
+  easy.
+calc_LHS (2 * sqrt (2 + 2 * cos x) / 4).
+  compute_sqrt; easy.
+field.
+Qed.
+
 Lemma cos_2_exp_n n : Rnat n -> cos (Pi / 2 ^ (n + 2)) =
-  Viete_aux n / 2 ^ (n + 1).
+  Viete_aux n / 2.
 Proof.
 induction 1.
   start_with (cos (Pi / 2 ^ (0 + 2))).
@@ -1438,21 +1453,365 @@ induction 1.
   calc_LHS (sqrt 2 / 2).
     now rewrite cos_Pi_fourth.
   symmetry.
-  start_with (Viete_aux 0 / 2 ^ (0 + 1)).
-  calc_LHS (Viete_aux 0 / 2 ^ 1).
-    now replace (0 + 1) with 1 by ring.
-  calc_LHS (Viete_aux 0 / 2).
-    now rewrite Rpow1.
+  start_with (Viete_aux 0 / 2).
   calc_LHS (sqrt 2 / 2).
     now rewrite (proj1 (Viete_aux_eqn)).
   easy.
-assert (rhs_step : Viete_aux (x + 1) / 2 ^ (x + 1 + 1) =
-          sqrt (2 + (Viete_aux x / 2 ^ (x + 1))) / 2).
-
-
-    
-    now rewrite Rpow1.
-  calc_LHS (1 / sqrt 2).
-    Search cos Pi 2.
+rename x into n.
+rename H into nNat.
+assert (0 < 2 ^ (n + 2)).
+  apply Rpow_lt; lra.
+start_with (cos (Pi / 2 ^ (n + 1 + 2))).
+calc_LHS (cos ((Pi / 2 ^ (n + 2 + 1)))).
+  replace (n + 1 + 2) with (n + 2 + 1) by ring.
   easy.
-  
+calc_LHS (cos (Pi / (2 ^ (n + 2) * 2))).
+  now rewrite Rpow_succ; [ | solve_Rnat].
+calc_LHS (cos ((Pi / (2 ^ (n + 2)) / 2))).
+  replace (Pi / (2 ^ (n + 2) * 2)) with ((Pi / 2 ^ (n + 2)) / 2)
+    by (field; lra).
+  easy.
+calc_LHS (sqrt (2 + 2 * cos (Pi / 2 ^ (n + 2))) / 2).
+  rewrite cos_half_formula.
+    easy.
+  split.
+    enough (0 < Pi / 2 ^ (n + 2)) by lra.
+    apply Rdiv_lt_0_compat.
+      exact Pi_gt0.
+    easy.
+  apply div_decr_r.
+    exact Pi_gt0.
+    split;[lra | ].
+  replace 2 with (2 ^ 1) at 1 by ring.
+  apply Rpow_incr_lt;[solve_Rnat | solve_Rnat | lra | ].
+  assert (0 <= n) by now apply Rnat_ge0.
+  lra.
+calc_LHS (sqrt (2 + 2 * (Viete_aux n / 2)) / 2).
+  now rewrite IHRnat.
+calc_LHS (sqrt (2 + Viete_aux n) / 2).
+  now replace (2 * (Viete_aux n / 2)) with (Viete_aux n) by field.
+calc_LHS (Viete_aux (n + 1) / 2).
+  rewrite (proj2 Viete_aux_eqn (n + 1)).
+    replace (n + 1 - 1) with n by ring.
+    easy.
+  solve_Rnat.
+easy.
+Qed.
+ 
+Lemma Rpow_incr_le x y z : Rnat y -> Rnat z ->
+  1 <= x -> y <= z -> x ^ y <= x ^ z.
+Proof.
+intros ynat znat xge1 ylez.
+assert (y = z \/ y < z) as [yz | yltz] by lra.
+  now rewrite yz; lra.
+assert (x = 1 \/ 1 < x) as [x1 | xgt1] by lra.
+  rewrite x1, !Rpow1_l.
+  lra.
+enough (x ^ y < x ^ z) by lra.
+apply Rpow_incr_lt; easy.
+Qed.
+
+Lemma pi_frac_bounds :
+  forall m, Rnat m -> 0 < Pi / 2 ^ (m + 1) <= Pi / 2.
+Proof.
+intros m mnat.
+split.
+  apply Rdiv_lt_0_compat.
+    apply Pi_gt0.
+  apply Rpow_lt; lra.
+apply div_decr_r_le.
+  apply Pi_gt0.
+assert (0 <= m) by now apply Rnat_ge0.
+split;[ lra | ].
+replace 2 with (2 ^ 1) at 1 by now rewrite Rpow1.
+apply Rpow_incr_le;[solve_Rnat | solve_Rnat | lra | lra].
+Qed.
+
+Lemma break_power_div a m : Rnat m ->
+  a / 2 ^ (m + 1) = 2 * (a / 2 ^ (m + 2)).
+  intros mnat.
+Proof.
+(* Field refuses to work, because of the need for the Rnat hypothesis*)
+replace (m + 2) with ((m + 1) + 1) by ring.
+replace (2 ^ ((m + 1) + 1)) with (2 * 2 ^ (m + 1)) by
+  (rewrite (Rpow_succ _ (m + 1)); [ring | solve_Rnat]).
+field.
+enough (0 < 2 ^ (m + 1)) by lra.
+apply Rpow_lt; lra.
+Qed.
+
+Lemma cos_Pi_frac_pow2_gt_0 n : Rnat n ->
+  0 < cos (Pi / 2 ^ (n + 2)).
+Proof.
+intros nnat.
+assert (0 < Pi / 2 ^ (n + 1) <= Pi / 2) by now apply pi_frac_bounds.
+assert (Pi / 2 ^ (n + 1) = 2 * (Pi / 2 ^ (n + 2))).
+  now apply break_power_div.
+apply first_cos_root.
+lra.
+Qed.
+
+Lemma prod_non_0 m n f : Rnat (n - m) -> Rnat m ->
+  (forall i, Rnat i -> m <= i < n -> f i <> 0) ->
+  \prod_(m <= i < n) f i <> 0.
+Proof.
+intros mnnat mnat.
+replace n with (n - m + m) by ring.
+revert mnnat.
+generalize (n - m).
+induction 1.
+  intros _; replace (0 + m) with m by ring.
+  rewrite prod0; lra.
+intros fcond.
+assert (fcond' : forall i, Rnat i -> m <= i < x + m -> f i <> 0).
+  intros i inat iint.
+  apply fcond.
+    easy.
+  lra.
+assert (xge0 : 0 <= x) by now apply Rnat_ge0.
+rewrite prod_recr;[ | solve_Rnat | lra].
+apply Rmult_integral_contrapositive_currified.
+  replace (x + 1 + m - 1) with (x + m) by ring.
+  apply IHmnnat; easy.
+apply fcond.
+  solve_Rnat.
+lra.
+Qed.
+
+Lemma sin_Pi_over_2_pow_n n : Rnat n -> sin (Pi / 2 ^ (n + 1)) =
+  1 / (\prod_(1 <= i < n + 1) cos (Pi / 2 ^ (i + 1)) * 2 ^ n).
+Proof.
+assert (pi_frac_bounds :
+  forall m, Rnat m -> 0 < Pi / 2 ^ (m + 1) <= Pi / 2).
+ intros m mnat.
+ split.
+    apply Rdiv_lt_0_compat.
+      apply Pi_gt0.
+    apply Rpow_lt; lra.
+  apply div_decr_r_le.
+    apply Pi_gt0.
+  assert (0 <= m) by now apply Rnat_ge0.
+  split;[ lra | ].
+  replace 2 with (2 ^ 1) at 1 by now rewrite Rpow1.
+  apply Rpow_incr_le;[solve_Rnat | solve_Rnat | lra | lra].
+assert (sin_not0 : forall m, Rnat m -> sin (Pi / 2 ^ (m + 1)) <> 0).
+  intros m mnat.
+  rewrite <- cos_Pi_half_sub.
+  enough (0 < cos (Pi / 2 - (Pi / 2 ^ (m + 1)))) by lra.
+  apply first_cos_root.
+  enough (0 < Pi / 2 ^ (m + 1) <= Pi / 2) by lra.
+  now apply pi_frac_bounds.
+intros nnat.
+(* assert (break : forall m, Rnat m ->
+  Pi / 2 ^ (m + 1) = 2 * (Pi / 2 ^ (m + 2))).
+  now apply break_power_div. *)
+assert (main : forall m, Rnat m ->
+  sin (Pi / 2 ^ (m + 2)) = sin (Pi / 2 ^ (m + 1)) /
+    (2 * cos(Pi / 2 ^ (m + 2)))).
+  intros m mnat.
+  rewrite break_power_div; solve_Rnat.
+  rewrite sin_double.
+  field.
+  enough (0 < cos (Pi / 2 ^ (m + 2))) by lra.
+  apply first_cos_root.
+  assert (0 < Pi / 2 ^ (m + 1) <= Pi / 2) by now apply pi_frac_bounds.
+  assert (Pi / 2 ^ (m + 1) = 2 * (Pi / 2 ^ (m + 2))) 
+    by now apply break_power_div.
+  lra.
+induction nnat as [ | n nnat Ihn].
+  start_with (sin (Pi / 2 ^ (0 + 1))).
+  calc_LHS (sin (Pi / 2 ^ 1)).
+    now replace (0 + 1) with 1 by ring.
+  calc_LHS (sin (Pi / 2)).
+    now replace (2 ^ 1) with 2 by ring.
+  calc_LHS 1.
+    now rewrite sin_Pi_half.
+  symmetry.
+  start_with (1 / (\prod_( 1 <= i < (0 + 1)) cos (Pi / 2 ^ (i + 1)) * 2 ^ 0)).
+  calc_LHS (1 / \prod_(1 <= i < (0 + 1)) cos (Pi / 2 ^ (i + 1))).
+    field.
+      replace (0 + 1) with 1 by ring.
+      rewrite prod0; lra.
+  calc_LHS (1 / \prod_(1 <= i < 1) cos (Pi / 2 ^ (i + 1))).
+    now replace (0 + 1) with 1 by ring.
+  rewrite prod0; field.
+replace (n + 1 + 1) with (n + 2) by ring.
+assert (prod_step : \prod_(1 <= i < (n + 2)) cos (Pi / 2 ^ (i + 1)) =
+   \prod_(1 <= i < (n + 1)) cos (Pi / 2 ^ (i + 1)) *
+     cos (Pi / 2 ^ (n + 2))).
+  assert (0 <= n) by now apply Rnat_ge0.
+  rewrite prod_recr;[ | solve_Rnat | lra ].
+  replace (n + 2 - 1 + 1) with (n + 2) by ring.
+  replace (n + 2 - 1) with (n + 1) by ring.
+  easy.
+assert (2 < 2 ^ (n + 2)).
+  replace 2 with (2 ^ 1) at 1 by ring.
+  assert (0 <= n) by now apply Rnat_ge0.
+  apply Rpow_incr_lt;[solve_Rnat | solve_Rnat | lra | lra ].
+assert (0 <= Pi / 2 ^ (n + 2) < Pi / 2).
+  assert (tmp := Pi_gt0).
+  split.
+    enough (0 < Pi / 2 ^ (n + 2)) by lra.
+    apply Rdiv_lt_0_compat; lra.
+  apply div_decr_r; lra.
+assert (0 < cos (Pi / 2 ^ (n + 2))).
+  now apply first_cos_root.
+assert (0 < 2 ^ n).
+  apply Rpow_lt; lra.
+assert (0 <= n) by now apply Rnat_ge0.
+start_with (sin (Pi / 2 ^ (n + 2))).
+calc_LHS (sin (Pi / 2 ^ (n + 1)) / (2 * cos (Pi / 2 ^ (n + 2)))).
+  now rewrite main.
+calc_LHS (((1 / (\prod_(1 <= i < (n + 1)) cos (Pi / 2 ^ (i + 1)) * 2 ^ n))) /
+            (2 * cos (Pi / 2 ^ (n + 2)))).
+  now rewrite Ihn.
+calc_LHS (1 / ((\prod_(1 <= i < (n + 1)) cos (Pi / 2 ^ (i + 1)) *
+  cos (Pi / 2 ^ (n + 2))) * (2 ^ n * 2))).
+  assert (\prod_(1 <= i < n + 1) cos (Pi / 2 ^ (i + 1)) <> 0).
+    apply prod_non_0; solve_Rnat.
+    intros i inat iint.
+    enough (0 < cos (Pi / 2 ^ (i + 1))) by lra.
+    replace (i + 1) with ((i - 1) + 2) by ring.
+    apply cos_Pi_frac_pow2_gt_0.
+    apply Rnat_sub; solve_Rnat; lra.
+  field; lra.
+calc_LHS (1 / (\prod_(1 <= i < (n + 2)) cos (Pi / 2 ^ (i + 1)) *
+  (2 ^ n * 2))).
+  rewrite (prod_recr _ _ (n + 2));[ | solve_Rnat | lra].
+  replace (n + 2 - 1 + 1) with (n + 2) by ring.
+  replace (n + 2 - 1) with (n + 1) by ring.
+  easy.
+now rewrite Rpow_succ.
+Qed.
+
+Parameter lim_nat_seq : (R -> R) -> R -> Prop.
+Axiom equiv_seq_inv : forall f g, (forall n, Rnat n -> f n <> 0) ->
+  (forall n, Rnat n -> g n <> 0) ->
+  lim_nat_seq (fun x => f x / g x) 1 ->
+  lim_nat_seq (fun x => g x / f x) 1.
+
+Axiom equiv_seq_sin_x : forall u, lim_nat_seq u 0 ->
+  lim_nat_seq (fun n => sin (u n) / u n) 1.
+
+Axiom powers_to_zero : forall a b, 1 < b ->
+  lim_nat_seq (fun n => a / b ^ n) 0.
+
+Axiom lim_nat_seq_constant : forall a, lim_nat_seq (fun n => a) a.
+
+Axiom equiv_to_lim : forall f g a, lim_nat_seq (fun n => f n / g n) 1->
+  lim_nat_seq (fun n => g n) a -> lim_nat_seq (fun n => f n) a.
+
+Axiom lim_nat_seq_ext_above : forall m f g l,
+  (forall i, m <= i -> Rnat i -> g i = f i) ->
+  lim_nat_seq f l -> lim_nat_seq g l.
+
+Parameter lim_nat_inf : (R -> R) -> Prop.
+
+Axiom lim_nat_inf_shift_x :
+  forall x, lim_nat_inf (fun i => i + x).
+
+Axiom lim_nat_inf_above : forall m f g ,
+  (forall i, Rnat i -> m <= i -> f i <= g i) ->
+    lim_nat_inf g -> lim_nat_inf f.
+
+Axiom lim_nat_seq_subseq : forall f g a,
+  (forall n, Rnat n -> Rnat (g n)) ->
+  lim_nat_inf g ->
+  lim_nat_seq f a -> lim_nat_seq (fun x => f (g x)) a.
+
+Lemma lim_nat_seq_ext f g l:
+  (forall i, Rnat i -> g i = f i) ->
+  lim_nat_seq f l -> lim_nat_seq g l.
+Proof.
+intros fg; apply (lim_nat_seq_ext_above 0).
+now intros i _; apply fg.
+Qed.
+
+Definition Viete n := 2 / Viete_aux n.
+
+Lemma Rnat_gt0_ge1 n : Rnat n -> 0 < n -> 1 <= n.
+Proof.
+intros nnat ngt0.
+enough (0 + 1 <= n) by lra.
+apply Rnat_le_lt;[solve_Rnat | solve_Rnat | easy].
+Qed.
+
+Lemma Viete_aux_pos n : Rnat n -> 0 < Viete_aux n.
+Proof.
+induction 1 as [ | n nnat Ihn].
+  rewrite (proj1 Viete_aux_eqn).
+  apply sqrt_lt_R0; lra.
+rewrite (proj2 Viete_aux_eqn);[ | solve_Rnat].
+replace (n + 1 - 1) with n by ring.
+apply sqrt_lt_R0; lra.
+Qed.
+
+Lemma Viete_formula :
+  lim_nat_seq (fun n => 2 * \prod_(0 <= i < n) Viete i) Pi.
+Proof.
+assert (sin_formula : 
+ forall n, Rnat n -> 2 * \prod_(0 <= i < n) Viete i =
+   2 ^ (n + 1) * sin (Pi / 2 ^ (n + 1))).
+  intros n nnat.
+  assert (0 <= n) by now apply Rnat_ge0.
+  assert (Viete_q : forall i, Rnat i -> 0<= i < n ->
+    Viete i = 1 / cos (Pi / 2 ^ (i + 2))).
+    intros i inat _.
+    unfold Viete.
+    rewrite cos_2_exp_n;[ | easy].
+    field.
+    enough (0 < Viete_aux i) by lra.
+    now apply Viete_aux_pos.
+  assert (cos_n0 : forall i, Rnat i -> 0 <= i < n ->
+            cos (Pi / 2 ^ (i + 2)) <> 0).
+    intros i inat _.
+    assert (0 < cos (Pi / 2 ^ (i + 2)))
+      by now apply cos_Pi_frac_pow2_gt_0.
+    lra.
+  assert (main1 : \prod_(0 <= i < n) Viete i =
+          1 / \prod_(0 <= i < n) cos (Pi / (2 ^ (i + 2)))).
+    rewrite <- prod_inverse; solve_Rnat; auto.
+    apply big_ext_low_nat; solve_Rnat; auto.
+  rewrite main1.
+  rewrite sin_Pi_over_2_pow_n; solve_Rnat.
+  rewrite Rpow_succ; solve_Rnat.
+  replace 1 with (0 + 1) at 5 by ring.
+  rewrite <- big_shift; solve_Rnat.
+  assert (triv : 
+          \prod_(0 <= i < n) cos (Pi / 2 ^ (i + 1 + 1)) =
+          \prod_(0 <= i < n) cos (Pi / 2 ^ (i + 2))).
+    apply big_ext_low_nat; solve_Rnat.
+    intros x _; replace (x + 1 + 1) with (x + 2) by ring.
+    easy.
+  rewrite triv.
+  field.
+  split.
+    enough (0 < 2 ^ n) by lra.
+    now apply Rpow_lt; lra.
+  apply prod_non_0; solve_Rnat.
+  intros i inat iint.
+  enough (0 < cos (Pi / 2 ^ (i + 2))) by lra.
+  apply cos_Pi_frac_pow2_gt_0; easy.
+apply (lim_nat_seq_ext _ _ _ sin_formula).
+apply (equiv_to_lim _ (fun _ => Pi));
+ [ | apply lim_nat_seq_constant].
+assert (ratio : forall n, Rnat n ->
+           2 ^ (n + 1) * sin (Pi / 2 ^ (n + 1)) / Pi =
+           sin (Pi / 2 ^ (n + 1)) / (Pi / 2 ^ (n + 1))).
+  intros n nat.
+  field.
+  split.
+    enough (0 < 2 ^ (n + 1)) by lra.
+    now apply Rpow_lt; lra.
+  enough (0 < Pi) by lra.
+  now apply Pi_gt0.
+apply (lim_nat_seq_ext _ _ _ ratio).
+apply equiv_seq_sin_x.
+apply (lim_nat_seq_subseq (fun i => Pi / 2 ^ i)).
+  solve_Rnat.
+apply lim_nat_inf_shift_x.
+apply powers_to_zero.
+lra.
+Qed.
+
+End Viete.

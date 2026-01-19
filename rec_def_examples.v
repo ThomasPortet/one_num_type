@@ -743,7 +743,7 @@ assert (eq3 : w7 =
   rewrite choose_suc; solve_Rnat; cycle 1.
     lra.
   ring.
-rewrite eq3, <- big_add; cycle 1.
+rewrite eq3, sum_split; cycle 1.
   replace (n - 0) with n by ring; solve_Rnat.
 apply f_equal.
 rewrite big_shift with

@@ -336,6 +336,9 @@ Proof.  unfold Rpow; rewrite IRN0, pow_O; easy. Qed.
 Lemma Rpow1 x : x ^ 1 = x.
 Proof.  unfold Rpow; rewrite IRN1, pow_1; easy. Qed.
 
+Lemma Rpow1_l x : Rpow 1 x = 1.
+Proof.  unfold Rpow; rewrite pow1; easy. Qed.
+
 Lemma Rpow_add x a b :
   Rnat a -> Rnat b -> x ^ (a + b) = x ^ a * x ^ b.
 Proof.
@@ -703,6 +706,10 @@ Definition associative_monoid {A : Type} (f : A -> A -> A) (idx : A) :=
    (forall x, f x idx = x) /\
    (forall x, f idx x = x).
 
+Definition commutative_structure {A : Type} (f : A -> A -> A) :=
+  (forall x y, f x y = f y x).
+
+
 Lemma big_recr {A : Type}(E : R -> A) (f : A -> A -> A) (idx : A) (a b : R) :
   associative_monoid f idx ->
   Rnat (b - a) -> a < b ->
@@ -732,6 +739,44 @@ destruct amf as [Pa [P1 P2]].
 now rewrite Ih, Pa; replace (a + (p + 1)) with (a + 1 + p) by ring.
 Qed.
 
+Lemma big_shift {A : Type} (op : A -> A -> A) v
+ (f : R -> A) (b k n : R) : Rnat (n - b) ->
+  \big[op/v]_(b <= i < n) (f (i + k)) =
+  \big[op/v]_((b + k) <= i < (n + k)) (f i).
+Proof.
+unfold Rbigop.
+replace (n + k - (b + k)) with (n - b) by ring.
+generalize (n - b); intros l lnat; revert b.
+induction lnat as [ | l lnat Ih]; intros b.
+  now rewrite !Rseq0.
+rewrite !Rseq_S; auto.
+simpl; rewrite Ih.
+now replace (b + 1 + k) with (b + k + 1) by ring.
+Qed.
+
+Lemma big_split {A : Type}(E F : R -> A) (g : A -> A -> A) (idx : A)
+  (a b : R) :
+  associative_monoid g idx -> commutative_structure g ->
+  Rnat (b - a) ->
+  \big[g / idx]_(a <= i < b) g (E i) (F i) =
+  g (\big[g / idx]_(a <= i < b) E i)
+    (\big[g / idx]_(a <= i < b) F i).
+Proof.
+intros amg cg hnat.
+replace a with (0 + a) by ring.
+replace b with (b - a + a) by ring.
+rewrite <- !big_shift; solve_Rnat.
+revert hnat; generalize (b - a).
+induction 1 as [ | n nnat Ihn].
+  now rewrite !big0, (proj1 (proj2 amg)).
+assert (0 <= n) by now apply Rnat_ge0.
+rewrite !(big_recr _ _ _ 0 (n + 1)); auto; solve_Rnat; try lra.
+replace (n + 1 - 1) with n by ring.
+rewrite Ihn.
+repeat rewrite <- (proj1 amg).
+now rewrite (cg (E (n + a)) (g _ _)), <- (proj1 amg), (cg (F _)).
+Qed.
+
 Lemma big1 {A : Type}(E : R -> A) (f : A -> A -> A) (idx : A) (a : R)
   {mf : associative_monoid f idx} :
   \big[f / idx]_(a <= i < a + 1) E i = E a.
@@ -742,6 +787,15 @@ rewrite big_recl, big0.
 lra.
 Qed.
 
+Lemma commutative_structure_Rplus : commutative_structure Rplus.
+Proof.
+exact Rplus_comm.
+Qed.
+
+Lemma commutative_structure_Rmult : commutative_structure Rmult.
+exact Rmult_comm.
+Qed.
+
 Lemma associative_monoid_Rplus : associative_monoid Rplus 0.
 Proof.
 split;[exact (fun x y z => eq_sym (Rplus_assoc x y z))| ].
@@ -749,7 +803,7 @@ split;[exact Rplus_0_r | exact Rplus_0_l].
 Qed.
 
 #[export]
-Hint Resolve associative_monoid_Rplus : core.
+Hint Resolve associative_monoid_Rplus commutative_structure_Rplus : core.
 
 Lemma associative_mul : associative_monoid Rmult 1.
 Proof.
@@ -761,16 +815,21 @@ exact Rmult_1_l.
 Qed.
 
 #[export]
-Hint Resolve associative_mul : core.
+Hint Resolve associative_mul commutative_structure_Rmult : core.
 
 Existing Class associative_monoid.
 Existing Instances associative_monoid_Rplus associative_mul.
+Existing Class commutative_structure.
+Existing Instances commutative_structure_Rplus commutative_structure_Rmult.
 
 Lemma sum0 (E : R -> R) (a : R) : \sum_(a <= i < a) E i = 0.
 Proof. now apply big0. Qed.
 
 Lemma sum1 (E : R -> R) (a : R) : \sum_(a <= i < a + 1) E i = E a.
 Proof. now apply big1. Qed.
+
+Lemma prod0 (E : R -> R) (a : R) : \prod_(a <= i < a) E i = 1.
+Proof. now apply big0. Qed.
 
 Lemma prod1 (E : R -> R) (a : R) : \prod_(a <= i < a + 1) E i = E a.
 Proof. now apply big1. Qed.
@@ -781,6 +840,22 @@ Lemma sum_recr (E : R -> R) (a b : R) :
    (\sum_(a <= i < (b - 1)) E i) + E (b - 1).
 Proof.
 apply big_recr; auto.
+Qed.
+
+Lemma sum_split (E F : R -> R) (a b : R) :
+  Rnat (b - a) ->
+  \sum_(a <= i < b) (E i + F i) =
+  \sum_(a <= i < b) E i + \sum_(a <= i < b) F i.
+Proof.
+apply big_split; auto.
+Qed.
+
+Lemma prod_split (E F : R -> R) (a b : R) :
+  Rnat (b - a) ->
+  \prod_(a <= i < b) (E i * F i) =
+  \prod_(a <= i < b) E i * \prod_(a <= i < b) F i.
+Proof.
+apply big_split; auto.
 Qed.
 
 Lemma prod_recr (E : R -> R) (a b : R) :
@@ -796,13 +871,7 @@ Lemma big_add (f g : R -> R) (b n : R) : Rnat (n - b) ->
   \sum_(b <= i < n) g i =
   \sum_(b <= i < n) (f i + g i).
 Proof.
-unfold Rbigop.
-generalize (n - b); intros k knat; revert b.
-induction knat as [ | k knat Ih]; intros b.
-  rewrite Rseq0; simpl; ring.
-rewrite Rseq_S'; replace (k + 1 - 1) with k by ring; auto.
-simpl.
-rewrite <- Ih; ring.
+symmetry; apply sum_split; easy.
 Qed.
 
 Lemma big_distr (f : R -> R) (b n a : R) : Rnat (n - b) ->
@@ -816,21 +885,6 @@ induction knat as [ | k knat Ih]; intros b.
 rewrite Rseq_S'; replace (k + 1 - 1) with k by ring; auto.
 simpl.
 rewrite <- Ih; ring.
-Qed.
-
-Lemma big_shift {A : Type} (op : A -> A -> A) v
- (f : R -> A) (b k n : R) : Rnat (n - b) ->
-  \big[op/v]_(b <= i < n) (f (i + k)) =
-  \big[op/v]_((b + k) <= i < (n + k)) (f i).
-Proof.
-unfold Rbigop.
-replace (n + k - (b + k)) with (n - b) by ring.
-generalize (n - b); intros l lnat; revert b.
-induction lnat as [ | l lnat Ih]; intros b.
-  now rewrite !Rseq0.
-rewrite !Rseq_S; auto.
-simpl; rewrite Ih.
-now replace (b + 1 + k) with (b + k + 1) by ring.
 Qed.
 
 Lemma big_ext {A : Type} (op : A -> A -> A) v (f g : R -> A)
@@ -868,4 +922,214 @@ intros x xnat xint.
 apply eq_ext; solve_Rnat.
 apply Rnat_ge0 in xnat.
 lra.
+Qed.
+
+Definition floor (x : R) : R := IZR (Zfloor x).
+
+Lemma floor_int x : Rint (floor x).
+Proof.  apply Rint_Z. Qed.
+
+Lemma floor_interval x : floor x <= x < floor x + 1.
+Proof. apply Zfloor_bound. Qed.
+
+(* math complements. *)
+
+Lemma mult_div_transfer_le y x z : 0 < y -> x * y <= z <-> x <= z / y.
+Proof.
+intros ygt0.
+split; intros known.
+  apply (Rmult_le_reg_r y);[easy | ].
+  replace (z / y * y) with z by (field; lra).
+  easy.
+apply (Rmult_le_reg_r (/ y)).
+  apply Rinv_0_lt_compat; easy.
+replace (x * y * / y) with x by (field; lra).
+easy.
+Qed.
+
+Lemma mult_div_transfer_le2 y x z : 0 < y -> x / y <= z <-> x <= z * y.
+Proof.
+intros ygt0; split; intros known.
+  apply (Rmult_le_reg_r (/ y)).
+    apply Rinv_0_lt_compat; easy.
+  replace (z * y * / y) with z by (field; lra).
+  easy.
+apply (Rmult_le_reg_r y).
+  easy.
+replace (x / y * y) with x by (field; lra).
+easy.
+Qed.
+
+Lemma mult_div_transfer_lt x y z : 0 < y -> x * y < z <-> x < z / y.
+Proof.
+intros ygt0.
+split; intros known.
+  apply (Rmult_lt_reg_r y);[easy | ].
+  replace (z / y * y) with z by (field; lra).
+  easy.
+apply (Rmult_lt_reg_r (/ y)).
+  apply Rinv_0_lt_compat; easy.
+replace (x * y * / y) with x by (field; lra).
+easy.
+Qed.
+
+Lemma mult_div_transfer_lt2 x y z : 0 < y -> x / y < z <-> x < z * y.
+Proof.
+intros ygt0.
+split; intros known.
+  apply (Rmult_lt_reg_r (/y)).
+    apply Rinv_0_lt_compat; easy.
+  replace (z * y * / y) with z by (field; lra).
+  easy.
+apply (Rmult_lt_reg_r y);[lra |].
+replace (x / y * y) with x by (field; lra).
+easy.
+Qed.
+
+Lemma Rpow_lt x y : 0 < x -> 0 < x ^ y.
+Proof.  apply pow_lt. Qed.
+
+Lemma Rpow_le x y : 0 <= x -> 0 <= x ^ y.
+Proof.  apply pow_le. Qed.
+
+Lemma square_pos x : x <> 0 -> 0 < x ^ 2.
+Proof.
+intros xn0.
+assert (x < 0 \/ 0 < x) as [xneg | xpos] by lra.
+  replace (x ^ 2) with ((- x) ^ 2) by ring.
+  apply Rpow_lt; lra.
+apply Rpow_lt; lra.
+Qed.
+
+Lemma square_ge0 x : 0 <= x ^ 2.
+Proof.
+assert (x < 0 \/ 0 <= x) as [xneg | xnneg] by lra.
+  replace (x ^  2) with ((-x) ^  2) by ring.
+  apply Rpow_le; lra.
+now apply Rpow_le.
+Qed.
+
+Lemma Rpow_incr x y z : 0 <= x <= y -> Rpow x z <= Rpow y z.
+Proof.
+apply pow_incr.
+Qed.
+
+Lemma div_decr_r x y z : 0 < x -> 0 < y < z -> x / z < x / y.
+Proof.
+intros xgt0 [ygt0 yltz].
+apply Rmult_lt_compat_l;[easy | ].
+apply Rinv_0_lt_contravar; lra.
+Qed.
+
+Lemma div_decr_r_le x y z : 0 < x -> 0 < y <= z -> x / z <= x / y.
+intros xgt0 [ygt0 ylez].
+assert (y = z \/ y < z) as [yz | yltz] by lra.
+  now rewrite yz.
+enough (x / z < x / y) by lra.
+apply div_decr_r; lra.
+Qed.
+
+Lemma Rpow_incr_lt x y z : Rnat y -> Rnat z -> 1 < x ->
+  y < z -> x ^ y < x ^ z.
+Proof.
+intros ynat znat xgt1 yltz.
+assert (ind_arg : Rnat (z - (y + 1))).
+  apply Rnat_sub;[easy | solve_Rnat| ].
+  apply Rnat_le_lt;[easy | easy | lra].
+replace z with (y + 1 + (z - (y + 1))) by ring.
+induction ind_arg.
+  replace (y + 1 + 0) with (y + 1) by ring.
+  rewrite Rpow_add;[ | solve_Rnat | solve_Rnat].
+  replace (x ^ 1) with x by ring.
+  replace (x ^ y) with (x ^ y * 1) at 1 by ring.
+  apply Rmult_lt_compat_l.
+    apply Rpow_lt; lra.
+  easy.
+apply Rlt_trans with (1 := IHind_arg).
+replace (y + 1 + (x0 + 1)) with (y + 1 + x0 + 1) by ring.
+rewrite (Rpow_add _ (y + 1 + x0));[ | solve_Rnat | solve_Rnat].
+replace (x ^ (y + 1 + x0)) with (x ^ (y + 1 + x0) * 1) at 1 by ring.
+apply Rmult_lt_compat_l.
+  apply Rpow_lt; lra.
+replace (x ^ 1) with x by ring.
+easy.
+Qed.
+
+(* To generalize (only the diff needs to be Rnat) and
+  move to R_subsets *)
+Lemma prod_inverse f n m :
+  Rnat n -> Rnat m -> n <= m ->
+  (forall i, Rnat i -> n <= i < m -> f i <> 0) ->
+  \prod_(n <= i < m) (1 / f i) = 1 / \prod_(n <= i < m) f i.
+Proof.
+intros nnat mnat nm fcond.
+assert (mnnat : Rnat (m - n)).
+  now apply Rnat_sub.
+enough (\prod_(n <= i < m) (1 / f i) =
+        1 / \prod_(n <= i < m) f i /\
+        \prod_(n <= i < m) f i <> 0) by tauto.
+replace n with (0 + n) by ring.
+replace m with (m - n + n) by ring.
+rewrite <- !big_shift;[ | solve_Rnat | solve_Rnat].
+assert (fcond' : forall i, Rnat i -> 
+   0 <= i < m - n -> f (n + i) <> 0).
+  intros i inat iint.
+  apply fcond;[ solve_Rnat | lra ].
+(* There is a bug in induction.  Here is a workaround using
+  more basic tactics. *)
+revert fcond'.
+pattern (m - n).
+apply Rnat_ind;[ | intros k knat Ihk | exact mnnat];
+intros fcond'.
+  rewrite !prod0.
+  lra.
+assert (0 <= k) by now apply Rnat_ge0.
+assert (fcondn : forall i, Rnat i -> 0 <= i < k -> f (n + i) <> 0).
+  intros i inat iint; apply fcond'; [easy | lra].
+destruct (Ihk fcondn) as [Ihk1 Ihk2]; clear Ihk.
+split.
+  rewrite !(prod_recr _ _ (k + 1));
+   [ | solve_Rnat | lra | solve_Rnat | lra].
+  replace (k + 1 - 1) with k by ring.
+  rewrite Ihk1.
+  field.
+  split.
+    replace (k + n) with (n + k) by ring.
+    apply fcond'.
+      solve_Rnat.
+    lra.
+  exact Ihk2.
+rewrite (prod_recr _ _ (k + 1));
+  [ | solve_Rnat | lra ].
+replace (k + 1 - 1 + n) with (n + k) by ring.
+apply Rmult_integral_contrapositive_currified.
+  replace (k + 1 - 1) with k by ring; exact Ihk2.
+apply fcond'.
+  solve_Rnat.
+lra.
+Qed.
+
+Lemma prod_const_0_n a n : Rnat n -> \prod_(0 <= i < n) a = a ^ n.
+Proof.
+induction 1 as [ | n nnat Ih].
+  rewrite Rpow0.
+  rewrite prod0.
+  easy.
+rewrite prod_recr.
+    replace (n + 1 - 1) with n by ring.
+    rewrite Ih.
+    rewrite Rpow_succ;[ring | easy ].
+  solve_Rnat.
+assert (0 <= n) by now apply Rnat_ge0.
+lra.
+Qed.
+
+Lemma prod_const m n a : Rnat m -> Rnat n -> m <= n ->
+  \prod_(m <= i < n) a = a ^ (n - m).
+Proof.
+intros mnat nnat mlen.
+replace m with (0 + m) at 1 by ring.
+replace n with ((n - m) + m) at 1 by ring.
+rewrite <- big_shift;[ | solve_Rnat; apply Rnat_sub; easy].
+rewrite prod_const_0_n;[easy | apply Rnat_sub; easy].
 Qed.
