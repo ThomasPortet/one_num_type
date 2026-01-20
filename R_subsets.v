@@ -1014,6 +1014,14 @@ Proof.
 apply pow_incr.
 Qed.
 
+Lemma div_not_0 x y : x <> 0 -> y <> 0 -> x / y <> 0.
+Proof.
+intros xn0 yn0.
+apply Rmult_integral_contrapositive_currified.
+  easy.
+now apply Rinv_neq_0_compat.
+Qed.
+
 Lemma div_decr_r x y z : 0 < x -> 0 < y < z -> x / z < x / y.
 Proof.
 intros xgt0 [ygt0 yltz].
