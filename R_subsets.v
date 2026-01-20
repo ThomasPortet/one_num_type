@@ -934,6 +934,13 @@ Proof. apply Zfloor_bound. Qed.
 
 (* math complements. *)
 
+Lemma div_eq_transfer x y z : y <> 0 -> x / y = z -> z * y = x.
+Proof.
+intros yn0 divxy; apply (Rdiv_eq_reg_r y);[ | easy].
+unfold Rdiv; rewrite Rmult_assoc, Rinv_r;[ | easy].
+now fold (x / y); rewrite divxy; field.
+Qed.
+
 Lemma mult_div_transfer_le y x z : 0 < y -> x * y <= z <-> x <= z / y.
 Proof.
 intros ygt0.
@@ -984,6 +991,21 @@ split; intros known.
 apply (Rmult_lt_reg_r y);[lra |].
 replace (x / y * y) with x by (field; lra).
 easy.
+Qed.
+
+Lemma div_cancel_r x y : y <> 0 -> x / y * y = x.
+Proof.
+intros yn0; unfold Rdiv; rewrite Rmult_assoc, Rinv_l.
+  ring.
+easy.
+Qed.
+
+Lemma div_le_1 x y : 0 < y -> x <= y -> x / y <= 1.
+Proof.
+intros ygt0 xlty.
+apply (Rmult_le_reg_r y).
+  easy.
+rewrite div_cancel_r; lra.
 Qed.
 
 Lemma Rpow_lt x y : 0 < x -> 0 < x ^ y.

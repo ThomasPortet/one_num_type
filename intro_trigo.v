@@ -1274,36 +1274,19 @@ calc_LHS (a * cos theta + b * sin theta).
 easy.
 Qed.
 
-<<<<<<< Updated upstream
-=======
-(* This should be hidden in R_subsets *)
-Definition floor (x : R) : R := IZR (Zfloor x).
-
-Lemma floor_int x : Rint (floor x).
-Proof.  apply Rint_Z. Qed.
-
-Lemma floor_interval x : floor x <= x < floor x + 1.
-Proof. apply Zfloor_bound. Qed.
-
->>>>>>> Stashed changes
 Lemma cos_non_0 x : (forall n, Rint n -> x <> Pi / 2 + n * Pi) ->
   cos x <> 0.
 Proof.
 intros defd.
-<<<<<<< Updated upstream
 assert (pi_gt0 := Pi_gt0).
 set (m := floor (x / (2 * Pi))).
 assert (nat_m : Rint m).
   now unfold m; apply floor_int.
-=======
-set (m := floor (x / (2 * Pi))).
->>>>>>> Stashed changes
 set (y := x - m * (2 * Pi)).
 assert (0 <= y < 2 * Pi).
   unfold y.
   enough (m * (2 * Pi) <= x < (m + 1) * (2 * Pi)) by lra.
   enough (m <= x / (2 * Pi) < (m + 1)).
-<<<<<<< Updated upstream
     split;[rewrite mult_div_transfer_le | ].
         tauto.
       lra.
@@ -1351,55 +1334,10 @@ rewrite <- par_cos.
 apply first_cos_root.
 lra.
 Qed.
-=======
-    now rewrite <- div_le_transfer_r, <- div_lt_transfer_l;[ | lra..].
-  apply floor_interval.
-assert (xeq : x = y + (2 * m) * Pi).
-   unfold y; field.
-assert (y <> Pi / 2 /\ y <> 3 * Pi / 2).
-  split.
-    intros ypi_half.
-    assert (abs: x = Pi / 2 + 2 * m * Pi).
-      rewrite xeq, ypi_half; field.
-    generalize abs; apply defd.
-    solve_Rnat.
-  intros ypi_3half.
-  assert (abs : x = Pi / 2 + (2 * m + 1) * Pi).
-    rewrite xeq, ypi_3half; field.
-  generalize abs; apply defd.
-  solve_Rnat.
-replace (cos x) with (cos y); cycle 1.
-  start_with (cos y).
-  calc_LHS (cos (x - m * (2 * Pi))).
-    easy.
-  calc_LHS (cos (x + 2 * -m * Pi)).
-    now replace (x + 2 * -m * Pi) with (x - m * (2 * Pi)) by ring.
-  apply cos_periodic.
-  solve_Rnat.
-  enough (main: forall z, 0 <= z < Pi -> z <> Pi / 2 -> cos z <> 0).
-  assert (y < Pi \/ Pi <= y) as [yupi | yapi] by lra.
-    apply main; lra.
-  enough (- cos y <> 0) by lra.
-  replace (- cos y) with (cos (y - Pi)); cycle 1.
-    now rewrite cos_sub_Pi.
-  apply main; lra.
-  clear.
-  intros z zbetween zn.
-  assert (z < Pi / 2 \/ Pi / 2 < z) as [zlow | zhigh] by lra.
-    enough (0 < cos z) by lra.
-    apply first_cos_root; lra.
-  enough (0 < - cos z) by lra.
-  replace (- cos z) with (cos (Pi - z)); cycle 1.
-    now rewrite cos_Pi_sub.
-  apply first_cos_root.
-  lra.
-  Qed.
->>>>>>> Stashed changes
 
 Lemma tan_derive_2 x : (forall n, Rint n -> x <> Pi / 2 + n * Pi) -> 
   derive tan x = 1 / cos x ^ 2.
 Proof.
-<<<<<<< Updated upstream
 intros xdefd.
 start_with (derive tan x).
 calc_LHS (1 + tan x ^ 2).
@@ -1411,6 +1349,91 @@ calc_LHS ((cos x ^ 2 + sin x ^ 2) / cos x ^ 2).
 calc_LHS (1 / cos x ^ 2).
   now rewrite unit_circle.
 easy.
+Qed.
+
+Definition tan_dom x := forall n, Rint n -> x <> Pi / 2 + n * Pi.
+
+Lemma par_tan_dom x : tan_dom x <-> tan_dom (- x).
+Proof.
+split; intros dom m mint xeq.
+  case (dom (- (m + 1))); try solve_Rnat.
+  replace x with (- (- x)) by ring.
+  rewrite xeq.
+  field.
+case (dom (- (m + 1))); try solve_Rnat.
+rewrite xeq.
+field.
+Qed.
+
+Lemma par_tan x : tan_dom x -> tan (- x) = - tan x.
+Proof.
+intros dx.
+assert (dx' : tan_dom (- x)).
+  now rewrite <- par_tan_dom.
+start_with (tan (- x)).
+calc_LHS (sin (- x) / cos (- x)).
+  now rewrite tan_val; auto.
+calc_LHS (- sin x / cos x).
+  now rewrite par_cos, par_sin.
+calc_LHS (- (sin x / cos x)).
+  now field; apply cos_non_0.
+now rewrite <- tan_val.
+Qed.
+
+Lemma tan_add : forall x y,
+  tan_dom x -> tan_dom y -> tan_dom (x + y) ->
+  tan (x + y) = (tan x + tan y) / (1 - tan  x * tan y).
+Proof.
+intros x y dx dy da.
+assert (cos x <> 0).
+  now apply cos_non_0.
+assert (cos y <> 0).
+  now apply cos_non_0.
+assert (cos x * cos y - sin x * sin y <> 0).
+  replace (cos x * cos y - sin x * sin y) with (cos (x + y)); cycle 1.
+    now rewrite cos_add.
+  now apply cos_non_0.
+start_with (tan (x + y)).
+calc_LHS (sin (x + y) / cos (x + y)). now rewrite tan_val.
+calc_LHS ((cos x * sin y + cos y * sin x) / (cos x * cos y - sin x * sin y)).
+  now rewrite cos_add, sin_add.
+calc_LHS (((sin x / cos x) + (sin y / cos y)) / (1 - (sin x / cos x) * (sin y / cos y))).
+  field; auto.
+calc_LHS ((tan x + (sin y / cos y)) / (1 - tan x * (sin y / cos y))).
+  now rewrite <- tan_val; auto.
+calc_LHS ((tan x + tan y) / (1 - tan x * tan y)).
+  now rewrite <- tan_val; auto.
+easy.
+Qed.
+
+Lemma tan_sub : forall x y,
+  tan_dom x -> tan_dom y -> tan_dom (x - y) ->
+  tan (x - y) = (tan x - tan y) / (1 + tan x * tan y).
+Proof.
+intros x y dx dy ds.
+assert (tan_dom (- y)).
+  now rewrite <- par_tan_dom.
+assert (cos x <> 0) by now apply cos_non_0.
+assert (cos y <> 0) by now apply cos_non_0.
+start_with (tan (x - y)).
+calc_LHS (tan (x + (- y))).
+  now replace (x - y) with (x + (- y)) by ring.
+calc_LHS ((tan x + tan (- y)) / (1 - tan x * tan (- y))).
+  now rewrite tan_add.
+calc_LHS ((tan x + - tan  y) / (1 - tan x * -tan y)).
+  now rewrite par_tan.
+field.
+(* Here there is a difficult side-condition that does not feel natural. *)
+replace (1 + tan x * tan y) with (cos (x - y) / (cos x * cos y)); cycle 1.
+  start_with (cos (x - y) / (cos x * cos y)).
+  calc_LHS ((cos x * cos y + sin x * sin y) / (cos x * cos y)).
+    now rewrite cos_sub.
+  calc_LHS (1 + (sin x / cos x) * (sin y / cos y)).
+    now field.
+  now rewrite <- !tan_val.
+apply div_not_0.
+  now apply cos_non_0.
+now apply Rmult_integral_contrapositive_currified.
 Qed.
 
 End trigo_facts.
@@ -1846,100 +1869,3 @@ lra.
 Qed.
 
 End Viete.
-=======
-intros defd.
-rewrite tan_derive; auto.
-rewrite tan_val; auto.
-assert (cos x <> 0).
-  apply cos_non_0; auto.
-start_with (1 + (sin x / cos x) ^ 2).
-calc_LHS ((cos x ^ 2 + sin x ^ 2) / cos x ^ 2).
-  field; auto.
-now rewrite unit_circle.
-Qed.
-
-Definition tan_dom x := forall n, Rint n -> x <> Pi / 2 + n * Pi.
-
-Lemma par_tan_dom x : tan_dom x <-> tan_dom (- x).
-Proof.
-split; intros dom m mint xeq.
-  case (dom (- (m + 1))); try solve_Rnat.
-  replace x with (- (- x)) by ring.
-  rewrite xeq.
-  field.
-case (dom (- (m + 1))); try solve_Rnat.
-rewrite xeq.
-field.
-Qed.
-
-Lemma par_tan x : tan_dom x -> tan (- x) = - tan x.
-Proof.
-intros dx.
-assert (dx' : tan_dom (- x)).
-  now rewrite <- par_tan_dom.
-start_with (tan (- x)).
-calc_LHS (sin (- x) / cos (- x)).
-  now rewrite tan_val; auto.
-calc_LHS (- sin x / cos x).
-  now rewrite par_cos, par_sin.
-calc_LHS (- (sin x / cos x)).
-  now field; apply cos_non_0.
-now rewrite <- tan_val.
-Qed.
-
-Lemma tan_add : forall x y,
-  tan_dom x -> tan_dom y -> tan_dom (x + y) ->
-  tan (x + y) = (tan x + tan y) / (1 - tan  x * tan y).
-Proof.
-intros x y dx dy da.
-assert (cos x <> 0).
-  now apply cos_non_0.
-assert (cos y <> 0).
-  now apply cos_non_0.
-assert (cos x * cos y - sin x * sin y <> 0).
-  replace (cos x * cos y - sin x * sin y) with (cos (x + y)); cycle 1.
-    now rewrite cos_add.
-  now apply cos_non_0.
-start_with (tan (x + y)).
-calc_LHS (sin (x + y) / cos (x + y)). now rewrite tan_val.
-calc_LHS ((cos x * sin y + cos y * sin x) / (cos x * cos y - sin x * sin y)).
-  now rewrite cos_add, sin_add.
-calc_LHS (((sin x / cos x) + (sin y / cos y)) / (1 - (sin x / cos x) * (sin y / cos y))).
-  field; auto.
-calc_LHS ((tan x + (sin y / cos y)) / (1 - tan x * (sin y / cos y))).
-  now rewrite <- tan_val; auto.
-calc_LHS ((tan x + tan y) / (1 - tan x * tan y)).
-  now rewrite <- tan_val; auto.
-easy.
-Qed.
-
-Lemma tan_sub : forall x y,
-  tan_dom x -> tan_dom y -> tan_dom (x - y) ->
-  tan (x - y) = (tan x - tan y) / (1 + tan x * tan y).
-Proof.
-intros x y dx dy ds.
-assert (tan_dom (- y)).
-  now rewrite <- par_tan_dom.
-assert (cos x <> 0) by now apply cos_non_0.
-assert (cos y <> 0) by now apply cos_non_0.
-start_with (tan (x - y)).
-calc_LHS (tan (x + (- y))).
-  now replace (x - y) with (x + (- y)) by ring.
-calc_LHS ((tan x + tan (- y)) / (1 - tan x * tan (- y))).
-  now rewrite tan_add.
-calc_LHS ((tan x + - tan  y) / (1 - tan x * -tan y)).
-  now rewrite par_tan.
-field.
-(* Here there is a difficult side-condition that does not feel natural. *)
-replace (1 + tan x * tan y) with (cos (x - y) / (cos x * cos y)); cycle 1.
-  start_with (cos (x - y) / (cos x * cos y)).
-  calc_LHS ((cos x * cos y + sin x * sin y) / (cos x * cos y)).
-    now rewrite cos_sub.
-  calc_LHS (1 + (sin x / cos x) * (sin y / cos y)).
-    now field.
-  now rewrite <- !tan_val.
-apply div_not_0.
-  now apply cos_non_0.
-now apply Rmult_integral_contrapositive_currified.
-Qed.
->>>>>>> Stashed changes
