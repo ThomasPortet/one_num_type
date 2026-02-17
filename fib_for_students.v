@@ -1,14 +1,14 @@
 #[local]
 Set Warnings "-notation-overridden".
 
-Require Import Reals List Lra R_subsets rec_def R_compute rec_def_examples.
+From Stdlib Require Import Reals List Lra Lia.
+Require Import R_subsets rec_def R_compute rec_def_examples.
 (* TODO: remove this line when the file contains only stuff for the student's
 eyes*)
 
 #[local]
 Set Warnings "+notation-overridden".
 
-Require Import Lia.
 Open Scope R_scope.
 
 (* You can type numeric formulas.  The result is a real number. *)

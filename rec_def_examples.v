@@ -1,4 +1,4 @@
-Require Import List Reals Lra Lia.
+From Stdlib Require Import List Reals Lra Lia.
 Set Warnings "-notation-overridden".
 Require Import R_subsets rec_def R_compute.
 Set Warnings "notation-overridden".
@@ -153,7 +153,7 @@ Existing Instance monster_nat.
 (* this is one way to keep the result in a theorem, without using the
   fact that the computation has already been done.  However, this is
   not for the eyes of students, because it exposes type Z. *)
-Derive f36 SuchThat (f36 = fib (fib 9 + 2)) As Ex_f_9.
+Derive f36 in (f36 = fib (fib 9 + 2)) as Ex_f_9.
 Proof.
 elpi r_compute (fib (fib 9 + 2)).
 unfold f36.
@@ -281,7 +281,7 @@ Qed.
 (* We can now prove the value for the formula that was initially intended, *)
 (* TODO: make the preliminary steps into tactic steps, withoug the need to *)
 (* define theorems.                                                        *)
-Derive huge_val SuchThat (huge_val = 42 + fib (factorial 5)) As huge_val_eq.
+Derive huge_val in (huge_val = 42 + fib (factorial 5)) as huge_val_eq.
 Proof.
 elpi r_compute (42 + fib (factorial 5)).
 unfold huge_val.
@@ -743,7 +743,7 @@ assert (eq3 : w7 =
   rewrite choose_suc; solve_Rnat; cycle 1.
     lra.
   ring.
-rewrite eq3, <- big_add; cycle 1.
+rewrite eq3, sum_split; cycle 1.
   replace (n - 0) with n by ring; solve_Rnat.
 apply f_equal.
 rewrite big_shift with

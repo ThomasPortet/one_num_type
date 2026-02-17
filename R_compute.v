@@ -1,7 +1,7 @@
 
 
 From elpi Require Import elpi.
-Require Import List Reals ClassicalEpsilon Lia Lra.
+From Stdlib Require Import List Reals ClassicalEpsilon Lia Lra.
 From OneNum.srcElpi Extra Dependency "translate_prf.elpi" as translate_prf.
 From OneNum.srcElpi Extra Dependency "compute.elpi" as compute.
 From OneNum.srcElpi Extra Dependency "gen.elpi" as gen.
@@ -75,8 +75,9 @@ destruct z2.
   simpl.
   rewrite Z.pow_pos_fold.
   change (Pos.to_nat p) with (Z.to_nat (Z.pos p)).
-  rewrite Z2Nat.id; easy.
-easy.
+
+ rewrite ZArith.Znat.Z2Nat.id; now easy.
+ easy.
 Qed.
   
 Lemma abs_compute : forall x, Rabs (IZR x) = IZR (Z.abs x).
@@ -87,27 +88,26 @@ Qed.
 Definition Req_bool (x y : R) := if (Req_dec_T x y) then true else false.
 Notation "x =? y" := (Req_bool x y) : R_scope.
 
-Lemma eq_bool_compute : forall x y, Req_bool (IZR x) (IZR y) = (Zeq_bool x y).
+Lemma eq_bool_compute : forall x y, Req_bool (IZR x) (IZR y) = (Z.eqb x y).
 Proof.
   intros.
   unfold Req_bool.
   destruct Req_dec_T as  [eqR|neqR] .
-    now rewrite (Zeq_bool_IZR x y).
-  unfold Zeq_bool.
-  apply Zeq_bool_IZR_neq in neqR.
-  rewrite <- Z.eqb_neq in neqR.
-  now rewrite <- Z.eqb_compare, neqR.
+    now symmetry; rewrite Z.eqb_eq; apply eq_IZR.
+  symmetry.
+  rewrite Z.eqb_neq.
+  now apply Zeq_bool_IZR_neq.
 Qed.
 
 Definition MyINR : N -> R :=
 fun n => match n with
-| 0%N => 0
-| N.pos p => IZR (Z.pos p)
+| N0 => 0
+| Npos p => IZR (Z.pos p)
   end.
 
 Definition at_x (a b c : R) := fun x => if (Req_bool x a) then b else (c).
 
-Definition at_x_Z (a b c : Z) := fun x => if (Zeq_bool x a) then b else c.
+Definition at_x_Z (a b c : Z) := fun x => if (Z.eqb x a) then b else c.
 
 Definition Rinf_bool (x y : R) := if (Rlt_dec x y) then true else false.
 
@@ -239,8 +239,9 @@ Elpi Accumulate lp:{{
 
 solve (goal _ _ _ _ [trm X] as G) GL :-
   std.do! [
-  translate_prf X V PRF ,
-  coq.reduction.vm.norm V _ _E2,
+  translate_prf X V PRF,
+  coq.reduction.vm.norm V _ E2,
+  Stmt = {{lp:X = IZR lp:E2}},
   coq.typecheck PRF Stmt ok,
   coq.say "stmt :" {coq.term->string Stmt},
   coq.ltac.call "r_compute_rewrite"
@@ -249,4 +250,23 @@ solve (goal _ _ _ _ [trm X] as G) GL :-
 
 solve A B :-
   coq.say "wrong" A B.
+}}.
+
+Elpi Tactic r_compute_if_possible.
+Elpi Accumulate Db R_compute.db.
+Elpi Accumulate Db R_translate.db.
+
+Elpi Accumulate lp:{{
+
+solve (goal _ _ _ _ [trm X] as G) GL :-
+  std.do! [
+  translate_prf X V PRF,
+  coq.reduction.vm.norm V _ E2,
+  Stmt = {{lp:X = IZR lp:E2}},
+  coq.typecheck PRF Stmt ok,
+  coq.ltac.call "r_compute_rewrite"
+    [trm {{lp:PRF : lp:Stmt}}] G GL
+  ].
+
+solve _ _.
 }}.
