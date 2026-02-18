@@ -168,4 +168,32 @@ say T :- coq.say {coq.term->string T}.
 
 pred sayL i:list term.
 sayL nil :- coq.say "nil".
-sayL [A|Tl] :- std.do![coq.say A, coq.say "::", sayL Tl].
+sayL [A|Tl] :- coq.term->string A S, std.do![coq.say S, coq.say "::", sayL Tl].
+
+pred sayLT i:list term.
+sayLT nil :- coq.say "nil".
+sayLT [T|Tl] :- std.do![coq.say {coq.term->string T}, coq.say "::", sayLT Tl].
+
+pred sayLA i:list argument.
+sayLA nil :- coq.say "nil".
+sayLA [A|Tl] :- std.do![coq.say A, coq.say "::", sayLA Tl].
+
+pred remove_duplicates i:list term, o:list term.
+remove_duplicates [] [].
+
+remove_duplicates [T | Ts] L1 :-
+    std.mem! Ts T,
+    remove_duplicates Ts L1.
+
+remove_duplicates [T | Ts] [T | L1] :-
+    remove_duplicates Ts L1.
+
+pred terms_to_trms i:list term, o:list argument.
+terms_to_trms nil nil.
+terms_to_trms [T | Tl] [trm T | Tl'] :-
+    terms_to_trms Tl Tl'.
+
+pred seal-goals i:list goal o:list sealed-goal.
+seal-goals [] [].
+seal-goals [G|R] [seal G|R1] :-
+    seal-goals R R1.
