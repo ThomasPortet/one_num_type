@@ -15,6 +15,9 @@ thm_table {{Req_bool}} {{Z.eqb}} {{eq_bool_compute}}.
 
 thm_table {{at_x}} {{at_x_Z}} {{at_x_compute}}.
 
+thm_table {{Rpow}} {{Z.pow}} {{pow_compute}}.
+thm_table {{at_x'}} {{at_x_Z'}} {{at_x'_compute}}.
+
 % arguments in a nat_thm_table relation are
 % 1/ a function f from R -> R
 % 2/ a function fz from Z -> Z

@@ -3,8 +3,6 @@ From Stdlib Require Import List Reals ClassicalEpsilon Lia Lra.
 From Stdlib Require Import Wellfounded.
 From OneNum.srcElpi Extra Dependency "tools.elpi" as tools.
 From OneNum.srcElpi Extra Dependency "recursive.elpi" as recursive.
-
-
 Set Warnings "-notation-overridden".
 Require Import R_subsets.
 Set Warnings "+notation-overridden".
@@ -12,42 +10,30 @@ Require Import Derive.
 
 Open Scope R_scope.
 
-Fixpoint ty_R (n : nat) : Type := 
-  match n with
-   0 => R
-  | S p => (R -> ty_R p)
-  end.
+Fixpoint ty_ (T : Type) (n : nat) : Type := 
+    match n with
+     0 => T
+    | S p => (T -> ty_ T p)
+    end.
+  
+Fixpoint cst_ (T : Type) (k : T) (n : nat) : (ty_ T n):= 
+      match n with
+       0 => k
+      | S p => (fun _ => (cst_ T k p))
+      end.
 
-Fixpoint id_R (n : nat) : (ty_R n):= 
-  match n with
-   0 => 0%R
-  | S p => (fun k => (id_R p))
-  end.
-
-Fixpoint ty_Z (n : nat) : Type := 
-  match n with
-   0 => Z
-  | S p => (Z -> ty_Z p)
-  end.
-
-Fixpoint id_Z (n : nat) : (ty_Z n):= 
-  match n with
-   0 => 0%Z
-  | S p => (fun k => (id_Z p))
-  end.
-
-Fixpoint MappZ {n : nat} (f : ty_Z n) (l : list Z):=
-  match n return ty_Z n -> list Z -> Z with 
-  |0 => fun (f : ty_Z 0) (l: list Z) => f
-  |S p => fun (f: Z -> ty_Z p) (l : list Z) =>
+Fixpoint MappZ {n : nat} (f : ty_ Z n) (l : list Z):=
+  match n return ty_ Z n -> list Z -> Z with 
+  |0 => fun (f : ty_ Z 0) (l: list Z) => f
+  |S p => fun (f: Z -> ty_ Z p) (l : list Z) =>
       match l with nil => MappZ (f 0%Z) nil
                   |a::tl => MappZ (f a) tl end
   end f l.
 
-Fixpoint MappR {n : nat} (f : ty_R n) (l : list R):=
-  match n return ty_R n -> list R -> R with 
-  |0 => fun (f : ty_R 0) (l: list R) => f
-  |S p => fun (f: R -> ty_R p) (l : list R) =>
+Fixpoint MappR {n : nat} (f : ty_ R  n) (l : list R):=
+  match n return ty_ R  n -> list R -> R with 
+  |0 => fun (f : ty_ R  0) (l: list R) => f
+  |S p => fun (f: R -> ty_ R  p) (l : list R) =>
       match l with nil => MappR (f 0%R) nil
                   |a::tl => MappR (f a) tl end
   end f l.
@@ -130,7 +116,7 @@ rewrite <- (Rabs_right n);[ | assert (tmp := Rnat_ge0 n nnat); lra].
 now apply abs_morph.
 Qed.
 
-Lemma Rnat_RabsN {n : nat} {f : ty_R (S n)} {fz : ty_Z (S n)}
+Lemma Rnat_RabsN {n : nat} {f : ty_ R  (S n)} {fz : ty_ Z (S n)}
   (abs_morph : forall r z, r = IZR z -> 
   forall lr lz, lr = map IZR lz ->
   @MappR n (f (Rabs r)) lr = IZR (MappZ (fz z) lz))
@@ -317,6 +303,18 @@ rewrite <- (morph _ _ eq_refl _ _ my).
 now rewrite <- abs_IZR.
 Qed.
 
+Lemma cancel_Rabs_posN (n : nat) (f : ty_ R  n) (fz : ty_ Z n):
+  (forall (r : R) (z : Z), r = IZR z ->
+   forall (l1 : list R) (l2 : list Z), l1 = map IZR l2 ->
+     @MappR n f ((Rabs r)::l1) = IZR (@MappZ n fz (z::l2))) ->
+  forall (p  : positive) (l1 : list R) (l2 : list Z), l1 = map IZR l2 ->
+  @MappR n f ((IZR (Z.pos p))::l1) = IZR (@MappZ n fz ((Z.pos p)::l2)).
+Proof.
+intros morph p m y my.
+rewrite <- (morph _ _ eq_refl _ _ my).
+now rewrite <- abs_IZR.
+Qed.
+
 Lemma cancel_Rabs_0 (f : R -> R) (fz : Z -> Z):
   (forall (n : R) (z : Z), n = IZR z ->
     f (Rabs n) = IZR (fz z)) ->
@@ -359,19 +357,19 @@ Ltac prove_recursive_specification T Order := unfold T;
 
 
 Definition P_trans1 (l : list (R -> R)) (f : Z -> R) (l' : list (Z->Z)) :=
-forall (i : nat) (x : Z), nth i l (id_R 1) (f x) = f (nth i l' (id_Z 1) x).
+forall (i : nat) (x : Z), nth i l (cst_ R 0%R  1) (f x) = f (nth i l' (cst_ Z 0%Z 1) x).
 
 Definition P_trans1' (l : list (R -> R)) (f : Z -> R) (l' : list (Z->Z)) :=
 forall (i : nat) (x : Z) (y : R), y = (f x) ->
-nth i l (id_R 1) y = f (nth i l' (id_Z 1) x).
+nth i l (cst_ R 0%R  1) y = f (nth i l' (cst_ Z 0%Z 1) x).
 
-Definition P_transN (n : nat) (l : list (ty_R n)) (f : Z -> R) (l' : list (ty_Z n)) :=
+Definition P_transN (n : nat) (l : list (ty_ R  n)) (f : Z -> R) (l' : list (ty_ Z n)) :=
 forall (i : nat) (x : (list Z)),
-MappR (nth i l (id_R n)) (List.map f x) = f (MappZ (nth i l' (id_Z n)) x).
+MappR (nth i l (cst_ R 0%R  n)) (List.map f x) = f (MappZ (nth i l' (cst_ Z 0%Z n)) x).
 
-Definition P_transN' (n : nat) (l : list (ty_R n)) (f : Z -> R) (l' : list (ty_Z n)) :=
+Definition P_transN' (n : nat) (l : list (ty_ R  n)) (f : Z -> R) (l' : list (ty_ Z n)) :=
 forall (i : nat) (x : (list Z)) (y : (list R)), y = List.map f x ->
-MappR (nth i l (id_R n)) y = f (MappZ (nth i l' (id_Z n)) x).
+MappR (nth i l (cst_ R 0%R  n)) y = f (MappZ (nth i l' (cst_ Z 0%Z n)) x).
 
 Lemma trf_trans : forall l f l', P_trans1 l f l' -> P_trans1' l f l'.
 Proof.
@@ -414,7 +412,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma funN_trf {n : nat} (g : ty_R n) (g' : ty_Z n) (f : Z -> R) : 
+Lemma funN_trf {n : nat} (g : ty_ R  n) (g' : ty_ Z n) (f : Z -> R) : 
 (forall x, MappR g (map f x) = f (MappZ g' x)) <->
 (forall x y, x = map f y -> MappR g x = f (MappZ g' y)).
 Proof.
@@ -427,7 +425,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma mapp_step n (f : ty_R (S n)) (g : ty_Z (S n)) :
+Lemma mapp_step n (f : ty_ R  (S n)) (g : ty_ Z (S n)) :
 (forall y l, MappR (f (IZR y)) (map IZR l) = IZR (MappZ (g y) l)) <->
 (forall l, MappR f (map IZR l) = IZR (MappZ g l)).
 Proof.
@@ -439,7 +437,7 @@ intros hyp y l.
 apply (hyp (y::l)).
 Qed.
 
-Lemma mapp_step' n (f : ty_R (S n)) (g : ty_Z (S n)) :
+Lemma mapp_step' n (f : ty_ R  (S n)) (g : ty_ Z (S n)) :
 (forall x y, x = IZR y -> forall l1 l2, l1 = map IZR l2 -> MappR (f x) l1 = IZR (MappZ (g y) l2)) <->
 (forall l1 l2, l1 = map IZR l2 -> MappR f l1 = IZR (MappZ g l2)).
 Proof.
@@ -480,7 +478,7 @@ Proof.
   now destruct n.
 Qed.
 
-Lemma P_transN_nil n :  P_transN n (@nil (ty_R n)) IZR (@nil (ty_Z n)).
+Lemma P_transN_nil n :  P_transN n (@nil (ty_ R  n)) IZR (@nil (ty_ Z n)).
 unfold P_transN.
 intros i x.
 rewrite !nth_nil.
@@ -511,7 +509,7 @@ Proof.
 Qed.
 
 Lemma nth_overflow_1 A A' p x : 
-nth (S p) (A::nil) (id_R 1) (IZR x) = IZR (nth (S p) (A'::nil) (id_Z 1) x).
+nth (S p) (A::nil) (cst_ R 0%R  1) (IZR x) = IZR (nth (S p) (A'::nil) (cst_ Z 0%Z 1) x).
 case p.
 reflexivity.
 reflexivity.
@@ -536,24 +534,24 @@ Proof.
 Qed.
 
 Lemma nat_rect_list_N :
-  forall (n' : nat) (l0 : list (ty_Z n')) (l' : list (ty_R n'))
-    (f : nat -> list (ty_Z n') -> list (ty_Z n'))
-    (f' : nat -> list (ty_R n') -> list (ty_R n'))
+  forall (n' : nat) (l0 : list (ty_ Z n')) (l' : list (ty_ R  n'))
+    (f : nat -> list (ty_ Z n') -> list (ty_ Z n'))
+    (f' : nat -> list (ty_ R  n') -> list (ty_ R  n'))
     (n : nat),
     P_transN n' l' IZR l0 ->
     (forall n lr lz, P_transN n' lr IZR lz -> 
         P_transN n' (f' n lr) IZR (f n lz)) ->
-    P_transN n' (nat_rect (fun _ : nat => list (ty_R n')) l' f' n) 
+    P_transN n' (nat_rect (fun _ : nat => list (ty_ R  n')) l' f' n) 
              IZR 
-             (nat_rect (fun _ : nat => list (ty_Z n')) l0 f n).
+             (nat_rect (fun _ : nat => list (ty_ Z n')) l0 f n).
 Proof.
   intros n' l0 l' f f' n H H'.
   apply (private.nat_rect_transfer (fun x y => P_transN n' x IZR y)); auto.
 Qed.
+
 Elpi Command Recursive.
 Elpi Accumulate File tools.
 Elpi Accumulate File recursive.
-
 Elpi Export Recursive.
 
 Notation "'def' id 'such' 'that' bo" := (fun id => bo) 

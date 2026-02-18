@@ -799,3 +799,108 @@ Elpi mirror_recursive_definition tail_addmul.
 Fail R_compute (fib (tail_addmul 3 (-5) 4 2)).
 R_compute (fib (tail_addmul 3 5 (-4) 2)) thm .
 Check thm.
+
+Recursive (def bin such that 
+    bin 0 = (fun m : R => at_x 0 1 0 m) /\ 
+    forall n, Rnat (n - 1) -> 
+    bin n = fun m : R =>  at_x 0 1 (bin (n - 1) (m - 1) + bin (n - 1) m) m).
+
+
+Check (bin 2 1).
+
+Print bin.
+Elpi mirror_recursive_definition bin.
+R_compute (bin 18 12).
+Check bin_Z_mirror.
+Search bin_Z_mirror.
+
+
+Recursive (def trinom such that 
+    trinom 0 = 
+    (fun k m : R => at_x 0 (at_x 0 1 0 k) 0 m) /\ 
+    forall n , Rnat (n - 1)
+    ->
+    trinom n = 
+    (fun k m :R => (trinom (n - 1) (k - 1) m + trinom (n - 1) k (m - 1) + trinom (n - 1) k m) ) )
+.
+
+Recursive (def quadrinom such that 
+    quadrinom 0 = 
+    (fun k m p : R => at_x 0 (at_x 0 (at_x 0 1 0 k) 0 m) 0 p) /\ 
+    forall n , Rnat (n - 1)
+    ->
+    quadrinom n = 
+    (fun k m p : R => (quadrinom (n - 1) (k - 1) m p + quadrinom (n - 1) k (m - 1) p + quadrinom (n - 1) k m (p - 1) + quadrinom (n-1) k m p) ) )
+.
+
+
+Check trinom_eqn.
+Elpi mirror_recursive_definition trinom.
+Elpi mirror_recursive_definition quadrinom.
+R_compute (trinom 3 2 2).
+R_compute (trinom 3 3 0).
+R_compute (trinom 3 0 0).
+R_compute (quadrinom 4 0 1 3).
+Section riddle.
+Context (i : Type).
+Context (Rich : i -> Prop).
+Context (mother : i -> i).
+Context (h : i).
+
+(* Statement of the riddle *)
+
+Theorem rich_mothers :
+(forall x, ~Rich(x) -> Rich(mother(x))) ->
+(forall x, ~Rich(mother(mother(x))) \/ ~Rich(x)) ->
+False.
+
+(* Proof of the riddle *)
+
+Proof.
+intros H1 H2.
+(** 2 clicks on the conclusion *)
+
+destruct (H2 h) as [H | H].
+(** DnD of [h] onto [H2], then click on the resulting hypothesis *)
+
+* pose proof (H1 _ H) as H'.
+(* If one naively uses [apply _ in], then one loses [H] although
+it is needed later! Hence the use of [pose proof]. *)
+(** DnD of [H1] onto [H] *)
+
+destruct (H2 (mother h)) as [H2' | H2'].
+apply H2'. exact H'.
+(** DnD of [H'] onto [H2]. Could also be performed stepwise:
+- Selection of [mother(h)] in [H']
+- DnD of [H'] onto [H2]
+- Click on the resulting hypothesis
+- DnD of [H2'] onto [H'] *)
+
+apply H1 in H2'.
+(** DnD of [H1] onto [H2'] *)
+
+apply H. exact H2'.
+(** DnD of [H] onto [H2'] *)
+
+* pose proof (H1 _ H) as H'.
+(** DnD of [H1] onto [H] *)
+
+destruct (H2 (mother h)) as [H2' | H2'].
+2: { apply H2'. exact H'. }
+(** DnD of [H'] onto [H2] *)
+
+pose proof (H1 _ H2') as H2''.
+(** DnD of [H1] onto [H2'] *)
+
+destruct (H2 (mother (mother h))) as [H2''' | H2'''].
+apply H2'''. exact H2''.
+(** DnD of [H2''] onto [H2] *)
+
+apply H1 in H2'''.
+(** DnD of [H1] onto [H2'''] *)
+
+apply H2'. exact H2'''.
+(** DnD of [H2'] onto [H2'''] *)
+
+Qed.
+End riddle.

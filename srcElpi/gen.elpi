@@ -8,7 +8,7 @@ add_last_list Tl X L'.
 pred p1 i:int, i:term, i:term, i:term, i:term, o:term.
 
 p1 0 F G L1 L2 {{@MappR lp:M lp:F lp:L1 = IZR (@MappZ lp:M lp:G lp:L2)}} :-
-std.assert-ok! (coq.typecheck  F {{ty_R lp:M}}) "wrong type for first function".
+std.assert-ok! (coq.typecheck  F {{ty_ R lp:M}}) "wrong type for first function".
 
 p1 N F G L1 L2 
 (prod `x` {{R}} x\ (prod `y` {{Z}} y\ (prod `eqxy` {{lp:x = IZR lp:y}} eqxy\

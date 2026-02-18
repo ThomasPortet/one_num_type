@@ -163,7 +163,7 @@ find_uses_of Ty F Spec Final Order_Z :-
   nargs_to_def_val Nargs DefN,
   N1 is  Nargs + 1,
   int_to_nat N1 NatNargs,
-  std.assert-ok! (coq.typecheck F {{ty_R lp:NatNargs}})
+  std.assert-ok! (coq.typecheck F {{ty_ R lp:NatNargs}})
   "one of the argument's type couldn't be determined",
 % TODO : error reporting is not satisfactory here
     std.assert! (Ts = [prod Scalar_name Sc_type F1])

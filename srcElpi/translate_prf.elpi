@@ -8,29 +8,6 @@ pred add_map i:term, o:term.
 add_map {{lp:E = IZR lp:F}} 
   (prod `lr` {{list R}} lr\ (prod `lz` {{list Z}} lz\ {{lp:lr= map IZR lp:lz -> @MappR 0 lp:E lp:lr = IZR (@MappZ 0 lp:F lp:lz) }} ) ).
 
-
-% The 4th term has type
-%  "forall (r_test : R) (z : Z),
-%   r_test = IZR z ->
-%   forall (r_test0 : R) (z0 : Z),
-%   r_test0 = IZR z0 ->
-%   forall (r_test1 : R) (z1 : Z),
-%   r_test1 = IZR z1 ->
-%   MappR (nth 0 lr (id_R 3)) (r_test :: r_test + r_test0 :: r_test1 :: nil) =
-%   IZR (MappZ (nth 0 lz (id_Z 3)) (z :: (z + z0)%Z :: z1 :: nil))"
-% which should be a subtype of
-%  "forall (x : list R) (y : list Z),
-%   x = map IZR y ->
-%   MappR (fun m r x0 : R => nth 0 lr (id_R 3) m (m + r) x0) x =
-%   IZR (MappZ (fun m r x0 : Z => nth 0 lz (id_Z 3) m (m + r)%Z x0) y)".
-
-% pred gen i:int, i:term,i:term,i:term, o: term.
-% gen N F G H 
-% {{ proj1 (mapp_step' lp:N1Nat lp:F lp:G) (proj1 (mapp_step') (fun x y eqxy => (lp:F x) (lp:G y)))}}
-%  :-
-% pi x\ pi y\ pi q\ 
-% (decl _ x {{R}}, decl _ y {{Z}}, decl _ q {{ lp:x = IZR lp:y}}) => gen N1  (f x) (g y) (h x y eqxy) R.
-
 pred hyps_to_list_proof i:int, i:term, o: term.
 
 hyps_to_list_proof 0 ({{lp:_E = IZR lp:_F}} as T) R :-
@@ -104,12 +81,12 @@ translate_prf (fun M {{R}} Bo) (fun M {{Z}} BoZ) Prf :-
   Prf = {{fun (r_test : R) (z : Z) (h : r_test = IZR z) => 
   lp:(Pf r_test z h)}}).
 
-translate_prf (fun M T Bo) (fun M {{ty_R lp:N}} BoZ) Prf :-
+translate_prf (fun M T Bo) (fun M {{ty_ R lp:N}} BoZ) Prf :-
   type_to_nargs T Nint,
   int_to_nat Nint N,
   (pi V VZ H\
   (decl V M T ,
-  decl VZ _ {{ty_Z lp:N}} ,
+  decl VZ _ {{ty_ Z lp:N}} ,
   translate_prf V VZ H) ==>
   translate_prf (Bo V) (BoZ VZ) (Pf V VZ H),
   Prf = {{fun (r : R) (z : Z) (h : r = IZR z) => lp:(Pf r z h)}})
@@ -138,32 +115,32 @@ translate_prf (fun L {{list (R -> R)}} F) (fun L {{list (Z -> Z)}} F1)
      PF0 = {{fun (lr : list (R->R)) (lz : list (Z->Z))
        (h : P_trans1 lr IZR lz ) => lp:(PF lr lz h)}}.
 
-translate_prf (fun L {{list lp:T}} F) (fun L {{list (ty_Z lp:N)}} F1)
+translate_prf (fun L {{list lp:T}} F) (fun L {{list (ty_ Z lp:N)}} F1)
    PF0 :-
    type_to_nargs T Nint,
    int_to_nat Nint N,
 
    (pi Cl1 Cl2 Hll L2 \
-   (decl Cl1 L {{list (ty_R lp:N)}},
-    decl Cl2 _ {{list (ty_Z lp:N)}},
+   (decl Cl1 L {{list (ty_ R lp:N)}},
+    decl Cl2 _ {{list (ty_ Z lp:N)}},
     decl Hll `IH` {{P_transN lp:N lp:Cl1 IZR lp:Cl2}},
      translate_prf Cl1 Cl2 Hll) =>
      translate_prf (F Cl1) (F1 Cl2) (PF Cl1 Cl2 Hll)),
-     PF0 = {{fun (lr : list (ty_R lp:N)) (lz : list (ty_Z lp:N))
+     PF0 = {{fun (lr : list (ty_ R lp:N)) (lz : list (ty_ Z lp:N))
        (h : P_transN lp:N lr IZR lz ) => lp:(PF lr lz h)}}.
 
 
-translate_prf {{nth lp:K lp:L (id_R 0)}} {{nth lp:K lp:Lz (id_Z 0)}}
-  {{private.nth_map (id_Z 0) (id_R 0) IZR lp:Lz lp:L lp:K eq_refl lp:H}} :-
+translate_prf {{nth lp:K lp:L (cst_ R 0%R 0)}} {{nth lp:K lp:Lz (cst_ Z 0%Z 0)}}
+  {{private.nth_map (cst_ Z 0%Z 0) (cst_ R 0%R 0) IZR lp:Lz lp:L lp:K eq_refl lp:H}} :-
   translate_prf L Lz H.
 
-translate_prf {{nth lp:K lp:L (id_R 1) lp:A_r}} {{nth lp:K lp:Lz (id_Z 1) lp:A_z}}
+translate_prf {{nth lp:K lp:L (cst_ R 0%R 1) lp:A_r}} {{nth lp:K lp:Lz (cst_ Z 0%Z 1) lp:A_z}}
   {{(trf_trans lp:L IZR lp:Lz lp:H) lp:K lp:A_z lp:A_r lp:Pa}} :-
   translate_prf L Lz H,
   translate_prf A_r A_z Pa.
 
-translate_prf (app [{{nth}}, Ty , K , L , {{id_R lp:NNat}} | ArgsR]) 
-(app [{{nth}} , {{ty_Z lp:NNat}}, K , Lz , {{id_Z lp:NNat}} | ArgsZ]) 
+translate_prf (app [{{nth}}, Ty , K , L , {{cst_ R 0%R lp:NNat}} | ArgsR]) 
+(app [{{nth}} , {{ty_ Z lp:NNat}}, K , Lz , {{cst_ Z 0%Z lp:NNat}} | ArgsZ]) 
   {{(trf_transN lp:NNat lp:L IZR lp:Lz lp:H) lp:K lp:Az lp:Ar lp:PaL}} :-
   std.do![
   type_to_nargs Ty N,
@@ -180,12 +157,12 @@ translate_prf {{@nil R}} {{@nil Z}} {{eq_refl : nil = @map Z R IZR nil}}:- !.
 
 translate_prf {{@nil (R->R)}} {{@nil (Z->Z)}} {{P_trans1_nil}} :- !.
 
-translate_prf {{@nil lp:T}} {{@nil (ty_Z lp:NNat)}} {{P_transN_nil lp:NNat}} :-
+translate_prf {{@nil lp:T}} {{@nil (ty_ Z lp:NNat)}} {{P_transN_nil lp:NNat}} :-
 type_to_nargs T N,
 int_to_nat N NNat.
 
 translate_prf {{@cons R lp:A lp:L}} {{cons lp:A1 lp:L1}}
-  {{f_equal2 (@cons (ty_R 0)) lp:Pfa lp:Pfl}}:-
+  {{f_equal2 (@cons (ty_ R 0)) lp:Pfa lp:Pfl}}:-
   !, std.do! [
     translate_prf A A1 Pfa,
     translate_prf L L1 Pfl
@@ -198,7 +175,7 @@ translate_prf {{@cons (R->R) lp:A lp:L}} {{cons lp:A1 lp:L1}}
     translate_prf L L1 Pfl
   ].
 
-translate_prf {{(@cons lp:T) lp:A lp:L}} {{@cons (ty_Z lp:NNat)lp:A1 lp:L1}}
+translate_prf {{(@cons lp:T) lp:A lp:L}} {{@cons (ty_ Z lp:NNat)lp:A1 lp:L1}}
   {{P_transN_cons lp:NNat lp:A lp:A1 lp:L lp:L1 
   (proj2 (@funN_trf lp:NNat lp:A lp:A1 IZR) lp:P) lp:Pfl}}:-
   !, std.do! [
@@ -301,7 +278,7 @@ prf_stmt {{Z->Z->Z}} Ft FG
   {{forall (r : R) (z : Z), r = IZR z ->  forall (a : R) (b : Z) , a = IZR b ->
   (lp:FG (Rabs r)) a = IZR ((lp:Ft z) b) }}.
 
-prf_stmt {{Z -> ty_Z (lp:N)}} Ft FG
+prf_stmt {{Z -> ty_ Z (lp:N)}} Ft FG
   {{forall (r : R) (z : Z), r = IZR z -> forall (lr : list R) (lz : list Z), lr = List.map IZR lz ->
   @MappR lp:N (lp:FG (Rabs r)) lr = IZR (@MappZ lp:N (lp:Ft z) lz)}} 
 .
@@ -317,9 +294,9 @@ main_translate_prf1
         lp:L1 lp:L lp:F1 lp:F
         (Z.abs_nat z)
         (* (fun (i : nat) (x : Z) =>
-           match i return nth i lp:L (id_R 1) (IZR x) = IZR (nth i lp:L1 (id_Z 1) x) with
+           match i return nth i lp:L (cst_ R 0%R 1) (IZR x) = IZR (nth i lp:L1 (cst_ Z 0%Z 1) x) with
             | 0 =>  (lp:LP 0%nat x)
-            | S p => (nth_overflow_1 (nth 0 lp:L (id_R 1)) (nth 0 lp:L1 (id_Z 1)) p x)
+            | S p => (nth_overflow_1 (nth 0 lp:L (cst_ R 0%R 1)) (nth 0 lp:L1 (cst_ Z 0%Z 1)) p x)
             end) *)
             lp:LP
         lp:FPRF)}} :-
@@ -362,7 +339,7 @@ main_translate_prf1
 
 main_translate_prf
   {{fun (n : R) =>
-      nth 0 (Rnat_rec lp:L lp:Frstep0 n) (id_R 0)}}
+      nth 0 (Rnat_rec lp:L lp:Frstep0 n) (cst_ R 0%R 0)}}
   F Prf1 :-
   Frstep0 = (fun _ {{R}} Frstep),
   Fnstep = (fun _ {{nat}} c \ (Frstep {{INR lp:c}})),
@@ -383,14 +360,14 @@ main_translate_prf
 
 main_translate_prf
   {{fun (r : R) =>
-      nth 0 (Rnat_rec lp:L lp:Frstep0 r) (id_R 1)}}
+      nth 0 (Rnat_rec lp:L lp:Frstep0 r) (cst_ R 0%R 1)}}
   F Prf1 :-
   Frstep0 = (fun _ {{R}} Frstep),
   Fnstep = (fun _ {{nat}} c \ (Frstep {{INR lp:c}})),
   main_translate_prf1 L Fnstep Lz Fz Prf,
   F = {{fun (x : Z) =>
          nth 0 (nat_rect (fun _ => list (Z->Z)) lp:Lz
-           lp:Fz (Z.abs_nat x)) (id_Z 1)}},
+           lp:Fz (Z.abs_nat x)) (cst_ Z 0%Z 1)}},
   std.assert-ok! (coq.typecheck F {{Z->Z->Z}})
     "failed to typecheck mirror function",
   Prf1 =
@@ -409,15 +386,15 @@ main_translate_prf
 
 main_translate_prf
   ({{fun (r : R) =>
-      nth 0 (Rnat_rec lp:L lp:Frstep0 r) (id_R lp:N) }})
+      nth 0 (Rnat_rec lp:L lp:Frstep0 r) (cst_ R 0%R lp:N) }})
   F Prf1 :-
   Frstep0 = (fun _ {{R}} Frstep),
   Fnstep = (fun _ {{nat}} c \ (Frstep {{INR lp:c}})),
   main_translate_prf1 L Fnstep Lz Fz Prf,
   F = {{fun (x : Z) =>
-         nth 0 (nat_rect (fun _ => list (ty_Z lp:N)) lp:Lz
-           lp:Fz (Z.abs_nat x)) (id_Z lp:N)}},
-  std.assert-ok! (coq.typecheck F {{ty_Z (S lp:N)}})
+         nth 0 (nat_rect (fun _ => list (ty_ Z lp:N)) lp:Lz
+           lp:Fz (Z.abs_nat x)) (cst_ Z 0%Z lp:N)}},
+  std.assert-ok! (coq.typecheck F {{ty_ Z (S lp:N)}})
     "failed to typecheck mirror function",
   Prf1 =
     {{
@@ -426,8 +403,8 @@ main_translate_prf
        (eq_ind_r
          (fun x : nat =>
           P_transN lp:N
-          (nat_rect (fun _ : nat => list (ty_R lp:N)) lp:L lp:Fnstep x) IZR
-          (nat_rect (fun _ : nat => list (ty_Z lp:N)) lp:Lz lp:Fz (Z.abs_nat z))
+          (nat_rect (fun _ : nat => list (ty_ R lp:N)) lp:L lp:Fnstep x) IZR
+          (nat_rect (fun _ : nat => list (ty_ Z lp:N)) lp:Lz lp:Fz (Z.abs_nat z))
           )
         (lp:Prf r z)
           (private.IRN_Z_abs_nat _ _ nzq)) 0%nat))

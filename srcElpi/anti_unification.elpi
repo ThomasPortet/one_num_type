@@ -1,0 +1,101 @@
+type gensym  int -> term.
+
+pred anti-unif i:int, i:term, i:term, o: list (triple term term term), o:term, o:int.
+
+anti-unif I A A nil A I.
+
+anti-unif I (app [F | Args]) (app [F | Args2]) Cds (app [F | CtA]) J:-
+    anti-unif-list I Args Args2 F Cds CtA J.
+
+% anti-unif (app [F1 | _] as T1) ([app [F2 | _]] as T2) Cds Ctx :-
+%     coq.typecheck T1 Ty ok,
+%     @pi-decl N1 Ty x\
+%         Ctx = x,
+%         Cds = (x,T1,T2).
+
+anti-unif I A B Cds Ctx J:-
+    Ctx = gensym I,
+    Cds = [(triple (gensym I) A B)],
+    J is I + 1.
+
+pred anti-unif-list i:int i:list term, i:list term, i:term, o:list (triple term term term), o:list term, o:int.
+
+anti-unif-list I [A | Tl] [A' | Tl'] F Cds [CtxA | CtxT] K :-
+    anti-unif I A A' CdA CtxA J,
+    anti-unif-list J Tl Tl' F CdT CtxT K,
+    std.append CdA CdT Cds.
+
+anti-unif-list I nil nil _F nil nil I.
+
+anti-unif-list _ nil [_| _] F _ _ _:- 
+    coq.term->string F S, 
+    coq.error ("unvalid number of arguments for function " ^ S).
+
+anti-unif-list _ [_| _] nil F _ _ _:-
+    coq.term->string F S, 
+    coq.error ("unvalid number of arguments for function " ^ S).
+
+pred proof_from_triple i:list (triple term term term), o:list term.
+
+proof_from_triple [triple _G T1 T2| Tl]  [Prf | Tl'] :-
+    coq.typecheck T1 Ty ok,
+    Stmt = {{@eq lp:Ty lp:T1 lp:T2}},
+    coq.typecheck Prf Stmt ok,
+    proof_from_triple Tl Tl'.
+
+% proof_from_triple [triple _G T1 T2| Tl]  [Prf | Tl'] :-
+%     coq.typecheck T1 Ty ok,
+%     Stmt = {{@eq lp:Ty lp:T1 lp:T2}},
+%     coq.typecheck Hole Stmt ok,
+%     coq.ltac.collect-goals Hole [G] [],
+%     if (coq.ltac.open (coq.ltac.call-ltac1 Tac) G [])
+%        (Prf = Hole)
+%        (coq.term->string T1 S1, 
+%         coq.term->string T2 S2, 
+%         coq.say "can't prove that" S1 "and" S2 "are equal with ring",
+%         (Prf = Hole)),    
+%     proof_from_triple Tl Tl'.
+
+proof_from_triple nil nil.
+
+pred holes_to_func i:list (triple term term term) i:term o:term.
+
+holes_to_func nil A A' :-
+    copy A A'.
+
+holes_to_func [(triple Gs T1 _ ) | Tl] T (fun `r` Ty F2) :-
+    coq.typecheck T1 Ty ok,
+    pi x\
+    (copy Gs x  :- !) =>
+    holes_to_func Tl T (F2 x).
+
+pred func_app2 i:term i:list (triple term term term) o:term.
+
+func_app2 F nil F.
+
+func_app2 F L (app [F | L2]) :-
+    std.map L (triple_2) L2.
+
+pred func_app3 i:term i:list (triple term term term) o:term.
+
+func_app3 F nil F.
+
+func_app3 F L (app [F | L3]) :-
+    std.map L (triple_3) L3.
+
+pred mk_prf i:term i:list term o:term.
+
+mk_prf P nil P.
+
+mk_prf P [Prf|Tl] P2 :-
+    mk_prf ({{f_g_equal lp:P lp:Prf}}) Tl P2.
+
+pred main-anti-unif i:term i:term  o:term.
+
+main-anti-unif T T {{eq_refl}}.
+
+main-anti-unif T1 T2 P :-
+    anti-unif 0 T1 T2 TL FwH _N,
+    proof_from_triple TL PL,
+    holes_to_func TL FwH F,
+    mk_prf ({{eq_refl lp:F}}) PL P.
