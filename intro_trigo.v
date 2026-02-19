@@ -1,5 +1,5 @@
 From Stdlib Require Import Reals ZArith Lra.
-From OneNum Require Import R_subsets rec_def R_compute anti_unif.
+From OneNum Require Import R_subsets rec_def R_compute anti_unif automation.
 From elpi Require Import elpi.
 
 Open Scope R_scope.
@@ -330,14 +330,12 @@ Ltac trinom_with_coeff_and_hypotheses A B C Thm First_Root Second_Root :=
   match goal with
   | discr_ge0 : 0 <= ?d ,
     equa : ?p = 0 |- ?X = ?V1 \/ ?X = ?V2 =>
-    idtac "debug point -1" p X;
     let h_a := fresh "lead_coeff_eq" in
     let h_b := fresh "discr_eq" in
     let h_c := fresh "equa_eq" in
     let h_d := fresh "first_root" in
     let h_e := fresh "second_root"in
     let h_tmp := fresh "tmp" in
-    idtac "debug point 1";
     assert (h_a : A <> 0 ) by (lra ||
       fail 1 "Working with equation" p "= 0"
         "You need to provide a proof that" A "is not 0");
@@ -346,8 +344,7 @@ Ltac trinom_with_coeff_and_hypotheses A B C Thm First_Root Second_Root :=
       fail 2 "failed to check discriminant identity"));
     assert (h_c : p = A * X ^ 2 + B * X + C) by (field; (easy || lra
       || fail 2 "failed to check trinom equality"));
-    assert (h_d : V1 = First_Root)
-      ; idtac "debug point 2";
+    assert (h_d : V1 = First_Root);
       [(( (* if field_simplify produces side goals, 
             we want them to be solved by easy or lra*)
         field_simplify D;[ idtac | (easy || lra) ..]);
