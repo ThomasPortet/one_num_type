@@ -1,90 +1,16 @@
 From elpi Require Import elpi.
-(* From Ltac2 Require Import Ltac2. *)
 From Stdlib Require Import Reals Lra.
 From OneNum Require Import R_subsets rec_def ring_simplify_bank field_simplify_bank.
 
-From OneNum.srcElpi Extra Dependency "anti_unification.elpi" as anti_unif.
 From OneNum.srcElpi Extra Dependency "tools.elpi" as tools.
-From OneNum.srcElpi Extra Dependency "super_ring.elpi" as super.
-
-
+From OneNum.srcElpi Extra Dependency "automation.elpi" as automation.
 
 Open Scope R_scope.
-Lemma f_g_equal  {T:Type}{T':Type}{f : T -> T'} {g x y} : 
-f = g -> x = y -> f x = g y.
-Proof.
-  intros.
-  rewrite H; now rewrite H0.
-Qed.
-Elpi Command a.
-Elpi Accumulate File anti_unif.
-Ltac my_ring := ring.
-
-
-
-Elpi Tactic anti_unification.
-Elpi Accumulate File anti_unif.
-
-Elpi Accumulate lp:{{
-
-    solve (goal _Ctx _ {{lp:T1 = lp:T2}} _  _ as G ) GL :-
-    main-anti-unif T1 T2  P ,
-    refine P G GL.
-
-    solve _ _ :-
-    coq.ltac.fail _ "problem anti-unif".
-
-}}.
-Tactic Notation "anti-unif" :=
-  elpi anti_unification.
-
-Ltac anti_unif_pack tac :=
-anti-unif ; ltac:(tac).
-
-Ltac superring :=
-my_ring || anti_unif_pack my_ring.
-
-Section Test.
-Variable x y : R.
-Elpi Query lp:{{
-    EX1 = {{cos x + sin y}},
-    EX2 = {{cos (x + 1) + sin (y+0)}},
-    
-    anti-unif 0 EX1 EX2 A B C,!,
-    holes_to_func A B E,
-    coq.term->string E SE,
-    coq.say SE,
-    main-anti-unif EX1 EX2 P,
-    coq.say SE,
-
-    coq.typecheck P {{lp:EX1 = lp:EX2}} ok,
-    main-anti-unif {{1+2 }} {{3-5}} P',
-    coq.typecheck P' {{1+2 = 3-5}} ok
-          }}.
-Elpi Query lp:{{
-    EX1 = {{cos(x + 1+2)}},
-    EX2 = {{cos (x +2+ 1)}},
-    
-    anti-unif 0 EX1 EX2 A B C,!,
-    holes_to_func A B E,
-    coq.term->string E SE,
-    coq.say SE,
-    main-anti-unif EX1 EX2 P,
-    coq.term->string P SP,
-    coq.say SP,
-
-    coq.typecheck P {{lp:EX1 = lp:EX2}} ok,
-    main-anti-unif {{1+2 }} {{3-5}} P',
-    coq.typecheck P' {{1+2 = 3-5}} ok
-          }}.
-End Test.
-
-
 
 Tactic Notation "super_ring" :=
   elpi super_ring.
 Elpi Tactic super_ring.
-Elpi Accumulate File super.
+Elpi Accumulate File automation.
 Elpi Accumulate File tools.
 
 Ltac super_ring' :=
@@ -99,8 +25,6 @@ Elpi Accumulate lp:{{
     terms_to_trms L TL, !,
     std.length L N,
     std.any->string N SN,
-        coq.say "number of arguments: " SN,
-    sayLT L,
     std.string.concat  "" ["r", SN] S,
     coq.ltac.call S TL G GL
     .
@@ -171,23 +95,19 @@ End Test.
 Tactic Notation "super_field" :=
   elpi super_field.
 Elpi Tactic super_field.
-Elpi Accumulate File super.
+Elpi Accumulate File automation.
 Elpi Accumulate File tools.
 
 
 Elpi Accumulate lp:{{
 
 solve (goal Ctx _ {{lp:T1 = lp:T2}} _  _ as G ) GL :-
-    coq.say "super_field called",
     sub_fieldable_r T1 [] L1,
     sub_fieldable_r T2 L1 L2,
-    sayL L2,
     remove_duplicates L2 L,
     terms_to_trms L TL, !,
     std.length L N,
-
     std.any->string N SN,
-    coq.say "number of arguments: " SN,
     std.string.concat  "" ["f", SN] S,
     coq.ltac.call S TL G GL
     .
@@ -199,7 +119,7 @@ solve _ _ :-
 
 
 Elpi Tactic add_ge0s.
-Elpi Accumulate File super.
+Elpi Accumulate File automation.
 Elpi Accumulate File tools.
 Elpi Accumulate lp:{{
 
