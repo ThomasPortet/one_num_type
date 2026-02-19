@@ -29,6 +29,31 @@ pred sub_fieldable_r i:term i:list term o:list term.
 sub_fieldable_r T L0 L  :-
     collect [{{ Rplus }}, {{ Rmult }}, {{ Ropp }}, {{ R1 }}, {{ R0 }}, {{Rminus}}, {{Rdiv}}, {{pow}}] [{{IZR}}] T [T|L0] L.
 
+func all_vars term, list term -> list term.
+
+all_vars (app [_| Args]) L0 L  :-
+    !, std.fold Args L0 all_vars L.
+
+all_vars T L0 [T|L0]  :- 
+    is_var T,!.
+
+all_vars _ L L.
+
+func is_var term.
+is_var (global (const _)).
+
+
+pred sub_ringable_vars i:term i:list term i:list term o:list term.
+
+sub_ringable_vars T L0 V L  :-
+    std.append V L0 L1,
+    sub_ringable_r T L1 L.
+
+
+pred sub_fieldable_r i:term i:list term o:list term.
+
+sub_fieldable_r T L0 L  :-
+    collect [{{ Rplus }}, {{ Rmult }}, {{ Ropp }}, {{ R1 }}, {{ R0 }}, {{Rminus}}, {{Rdiv}}, {{pow}}] [{{IZR}}] T [T|L0] L.
 pred is_hyp_ge0  i:term i:prop.
 
 is_hyp_ge0 T (def _ _ {{0 <= lp:T}} _). 

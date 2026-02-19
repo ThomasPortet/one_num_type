@@ -7,6 +7,7 @@ From OneNum.srcElpi Extra Dependency "automation.elpi" as automation.
 
 Open Scope R_scope.
 
+
 Tactic Notation "super_ring" :=
   elpi super_ring.
 Elpi Tactic super_ring.
@@ -92,6 +93,95 @@ lra.
 Qed.
 End Test.
 
+
+
+
+
+Elpi Db vars.db lp:{{
+  func vars -> list term.
+  vars [].
+}}.
+
+Elpi Tactic super_ring_first.
+Elpi Accumulate File automation.
+Elpi Accumulate File tools.
+Elpi Accumulate Db vars.db.
+Elpi Accumulate lp:{{
+
+    solve (goal _Ctx _ {{lp:T1 = lp:T2}} _  _ as G ) GL :-
+    vars L,
+    all_vars T1 L L1',
+    all_vars T2 L1' L2',
+    remove_duplicates L2' L',
+    coq.elpi.accumulate _ "vars.db" (clause _ _ (vars L')),
+    sayLT L',
+    sub_ringable_r T1 [] L1,
+    sub_ringable_r T2 L1 L2,
+    remove_duplicates L2 L,
+    terms_to_trms L TL, !,
+    std.length L N,
+    std.any->string N SN,
+    std.string.concat  "" ["r", SN] S,
+    coq.ltac.call S TL G GL
+    .
+
+    solve _ _ :-
+    coq.ltac.fail _ "problem super_ring".
+
+}}.
+
+Elpi Tactic clean_vars.
+Elpi Accumulate Db vars.db.
+Elpi Accumulate lp:{{
+
+    solve _ _ :-
+    {
+      (clause Name _ (vars L)) = _ ,
+      remove-clause Name _ _
+    }.
+
+    solve _ _ :-
+    coq.ltac.fail _ "problem super_ring".
+
+}}.
+Ltac super_ring_iterated :=
+elpi super_ring_first ; try reflexivity ; super_ring_iterated; clean_vars.
+Section Test.
+Variable x y z t: R.
+
+Elpi Query lp:{{
+ T = {{ cos ( x+ y)}},
+collect [{{Rplus}}] []T [] L1,
+sayL L1 
+}}.
+
+Goal cos ( x+ y) = cos (y+ x).
+
+elpi super_ring_first.
+reflexivity.
+Qed.
+Goal cos (x + 1 + 2) = cos (x + 2 + 1).
+
+elpi super_ring_first.
+ easy.
+Qed.
+
+Goal  x+cos (y +sin t) = cos (sin (t+0) + y +0)+x.
+elpi super_ring_first.
+super_ring'.
+Qed.
+
+Goal  2 * sin (x+ cos(y)) + cos(y+x+0) = cos (x+y)+2* sin (cos (y)+x) .
+elpi super_ring_first.
+
+super_ring'.
+Qed.
+
+Goal sin (x + 0) + 2*x - x = sin x + x.
+super_ring'.
+Qed.
+End Test.
+
 Tactic Notation "super_field" :=
   elpi super_field.
 Elpi Tactic super_field.
@@ -101,7 +191,7 @@ Elpi Accumulate File tools.
 
 Elpi Accumulate lp:{{
 
-solve (goal Ctx _ {{lp:T1 = lp:T2}} _  _ as G ) GL :-
+solve (goal _Ctx _ {{lp:T1 = lp:T2}} _  _ as G ) GL :-
     sub_fieldable_r T1 [] L1,
     sub_fieldable_r T2 L1 L2,
     remove_duplicates L2 L,
