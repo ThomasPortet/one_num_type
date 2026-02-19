@@ -3,14 +3,14 @@ From Stdlib Require Import Reals Lra.
 From OneNum Require Import R_subsets rec_def ring_simplify_bank field_simplify_bank.
 
 From OneNum.srcElpi Extra Dependency "tools.elpi" as tools.
-From OneNum.srcElpi Extra Dependency "automation.elpi" as super.
+From OneNum.srcElpi Extra Dependency "automation.elpi" as automation.
 
 Open Scope R_scope.
 
 Tactic Notation "super_ring" :=
   elpi super_ring.
 Elpi Tactic super_ring.
-Elpi Accumulate File super.
+Elpi Accumulate File automation.
 Elpi Accumulate File tools.
 
 Ltac super_ring' :=
@@ -95,7 +95,7 @@ End Test.
 Tactic Notation "super_field" :=
   elpi super_field.
 Elpi Tactic super_field.
-Elpi Accumulate File super.
+Elpi Accumulate File automation.
 Elpi Accumulate File tools.
 
 
@@ -119,7 +119,7 @@ solve _ _ :-
 
 
 Elpi Tactic add_ge0s.
-Elpi Accumulate File super.
+Elpi Accumulate File automation.
 Elpi Accumulate File tools.
 Elpi Accumulate lp:{{
 
