@@ -193,7 +193,22 @@ terms_to_trms nil nil.
 terms_to_trms [T | Tl] [trm T | Tl'] :-
     terms_to_trms Tl Tl'.
 
+pred trms_to_terms i:list argument, o:list term.
+trms_to_terms nil nil.
+trms_to_terms [trm T | Tl] [T | Tl'] :-
+    trms_to_terms Tl Tl'.
+
 pred seal-goals i:list goal o:list sealed-goal.
 seal-goals [] [].
 seal-goals [G|R] [seal G|R1] :-
     seal-goals R R1.
+
+func list_to_real list term -> term.
+list_to_real nil {{@ nil R}}.
+list_to_real [T|Tl] {{@cons R lp:T lp:L}} :-
+    list_to_real Tl L.
+
+func term_to_list term -> list term.
+term_to_list {{nil}} nil.
+term_to_list {{(lp:T)::(lp:L)}}[T|Tl] :-
+    term_to_list L Tl.

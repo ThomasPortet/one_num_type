@@ -1,5 +1,5 @@
 From elpi Require Import elpi.
-From Stdlib Require Import Reals Lra.
+From Stdlib Require Import Reals Lra Ring List.
 From OneNum Require Import R_subsets rec_def ring_simplify_bank field_simplify_bank.
 
 From OneNum.srcElpi Extra Dependency "tools.elpi" as tools.
@@ -7,33 +7,108 @@ From OneNum.srcElpi Extra Dependency "automation.elpi" as automation.
 
 Open Scope R_scope.
 
+ Ltac xx rl :=
+
+  let G := Get_goal in
+  
+  ring_lookup (PackRing Ring_simplify) [] rl G .
+
+Elpi Tactic test.
+
+Elpi Accumulate lp:{{
+  solve (goal C R T E []) GL :- coq.ltac.call-ltac1 "xx" (goal C R T E [trm {{ 0 + 0 }}]) GL.}}.
+
+Goal forall f, 0%Z = f (0 + 0) :> Z.
+intro f.
+elpi test.
+match goal with |- 0%Z = f 0 => idtac end.
+Abort. 
+
 
 Tactic Notation "super_ring" :=
   elpi super_ring.
+(* Ltac super_ring' :=
+repeat  (progress (super_ring ;try reflexivity)) ;  try reflexivity. *)
+
+
 Elpi Tactic super_ring.
 Elpi Accumulate File automation.
 Elpi Accumulate File tools.
 
-Ltac super_ring' :=
-repeat  (progress (super_ring ;try reflexivity)) ;  try reflexivity.
-
 Elpi Accumulate lp:{{
 
-    solve (goal _Ctx _ {{lp:T1 = lp:T2}} _  _ as G ) GL :-
+    solve (goal C R ({{@eq R lp:T1 lp:T2}} as T) E _ as G)  GL :-
     sub_ringable_r T1 [] L1,
     sub_ringable_r T2 L1 L2,
     remove_duplicates L2 L,
     terms_to_trms L TL, !,
+    sayLT L,
     std.length L N,
     std.any->string N SN,
     std.string.concat  "" ["r", SN] S,
-    coq.ltac.call S TL G GL
+    coq.say "super_ring tried",
+    coq.ltac.call S TL G  GL,
+    % coq.ltac.call "xx" TL G  GL,
+    % coq.ltac.call-ltac1 "xx" (goal C R T E [trm {{(0+0)}}, trm {{0}}]) GL,
+    coq.say "super_ring succeeded"
     .
 
     solve _ _ :-
     coq.ltac.fail _ "problem super_ring".
 
 }}.
+Elpi Tactic super_ring_i .
+Elpi Accumulate File automation.
+Elpi Accumulate File tools.
+Elpi Accumulate lp:{{
+
+    solve (goal _ _ {{lp:T1 = lp:T2}} _ [trm TL'] as G)  GL :-
+    term_to_list TL' L',
+    sub_ringable_r T1 L' L1,
+    sub_ringable_r T2 L1 L2,
+    remove_duplicates L2 L,
+    terms_to_trms L TL, !,
+    std.length L N,
+    std.any->string N SN,
+    std.string.concat  "" ["r", SN] S,
+    % coq.ltac.call "xx" TL G  GL,
+    % coq.ltac.call-ltac1 "xx" (goal C R T E [trm {{(0+0)}}, trm {{0}}]) GL,
+    coq.ltac.call S TL G  GL
+    .
+
+    solve _ _ :-
+    coq.ltac.fail _ "problem super_ring_i".
+
+}}.
+
+Ltac super_ring_i vars := (elpi super_ring_i (vars)).
+Ltac super_ring_iterator vars := 
+repeat (progress(super_ring_i vars);try reflexivity); try reflexivity.
+Elpi Tactic super_ring_iterate.
+Elpi Accumulate File automation.
+Elpi Accumulate File tools.
+Elpi Accumulate lp:{{
+
+    solve (goal _Ctx _ {{lp:T1 = lp:T2}} _  _ as G ) GL :-
+    all_vars T1 [] L1',
+    all_vars T2 L1' L2',
+    remove_duplicates L2' L',
+    !,
+    list_to_real L' TL,
+    coq.ltac.call "super_ring_iterator" [trm TL] G GL
+    .
+
+    solve _ _ :-
+    coq.ltac.fail _ "problem super_ring_iterate".
+
+}}.
+
+Ltac super_ring' := elpi super_ring_iterate.
+(* Goal cos (0+0) =cos 0.
+(* ring_simplify (0+0) (0). *)
+super_ring. *)
+
+
 Section Test.
 Variable x y z t: R.
 
@@ -43,8 +118,9 @@ collect [{{Rplus}}] []T [] L1,
 sayL L1 
 }}.
 
-Goal cos ( x+ y) = cos (y+ x).
-
+Goal forall x y, cos ( x+ y) = cos (y+ x).
+intros.
+(* ring_simplify (x+y) (y+x). *)
 super_ring.
 reflexivity.
 Qed.
@@ -93,94 +169,28 @@ lra.
 Qed.
 End Test.
 
-
-
-
-
-Elpi Db vars.db lp:{{
-  func vars -> list term.
-  vars [].
-}}.
-
-Elpi Tactic super_ring_first.
+Elpi Tactic super_ring_i .
 Elpi Accumulate File automation.
 Elpi Accumulate File tools.
-Elpi Accumulate Db vars.db.
 Elpi Accumulate lp:{{
 
-    solve (goal _Ctx _ {{lp:T1 = lp:T2}} _  _ as G ) GL :-
-    vars L,
-    all_vars T1 L L1',
-    all_vars T2 L1' L2',
-    remove_duplicates L2' L',
-    coq.elpi.accumulate _ "vars.db" (clause _ _ (vars L')),
-    sayLT L',
-    sub_ringable_r T1 [] L1,
+    solve (goal _ _ {{lp:T1 = lp:T2}} _ [trm TL'] as G)  GL :-
+    term_to_list TL' L',
+    sub_ringable_r T1 L' L1,
     sub_ringable_r T2 L1 L2,
     remove_duplicates L2 L,
     terms_to_trms L TL, !,
     std.length L N,
     std.any->string N SN,
     std.string.concat  "" ["r", SN] S,
-    coq.ltac.call S TL G GL
+    coq.ltac.call S TL G  GL
     .
 
     solve _ _ :-
-    coq.ltac.fail _ "problem super_ring".
+    coq.ltac.fail _ "problem super_ring_i".
 
 }}.
 
-Elpi Tactic clean_vars.
-Elpi Accumulate Db vars.db.
-Elpi Accumulate lp:{{
-
-    solve _ _ :-
-    {
-      (clause Name _ (vars L)) = _ ,
-      remove-clause Name _ _
-    }.
-
-    solve _ _ :-
-    coq.ltac.fail _ "problem super_ring".
-
-}}.
-Ltac super_ring_iterated :=
-elpi super_ring_first ; try reflexivity ; super_ring_iterated; clean_vars.
-Section Test.
-Variable x y z t: R.
-
-Elpi Query lp:{{
- T = {{ cos ( x+ y)}},
-collect [{{Rplus}}] []T [] L1,
-sayL L1 
-}}.
-
-Goal cos ( x+ y) = cos (y+ x).
-
-elpi super_ring_first.
-reflexivity.
-Qed.
-Goal cos (x + 1 + 2) = cos (x + 2 + 1).
-
-elpi super_ring_first.
- easy.
-Qed.
-
-Goal  x+cos (y +sin t) = cos (sin (t+0) + y +0)+x.
-elpi super_ring_first.
-super_ring'.
-Qed.
-
-Goal  2 * sin (x+ cos(y)) + cos(y+x+0) = cos (x+y)+2* sin (cos (y)+x) .
-elpi super_ring_first.
-
-super_ring'.
-Qed.
-
-Goal sin (x + 0) + 2*x - x = sin x + x.
-super_ring'.
-Qed.
-End Test.
 
 Tactic Notation "super_field" :=
   elpi super_field.
@@ -206,6 +216,7 @@ solve _ _ :-
     coq.ltac.fail _ "problem super_field".
 
 }}.
+
 
 
 Elpi Tactic add_ge0s.
@@ -265,8 +276,9 @@ End Test.
 Ltac super :=
   repeat progress (
       super_ring
-   || super_field
+   || (super_field)
    || add_ge0s
    || lra
   );
   try reflexivity.
+
