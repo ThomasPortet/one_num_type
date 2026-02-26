@@ -176,7 +176,7 @@ sayLT [T|Tl] :- std.do![coq.say {coq.term->string T}, coq.say "::", sayLT Tl].
 
 pred sayLA i:list argument.
 sayLA nil :- coq.say "nil".
-sayLA [A|Tl] :- std.do![coq.say A, coq.say "::", sayLA Tl].
+sayLA [trm A|Tl] :- std.do![coq.say {coq.term->string A}, coq.say "::", sayLA Tl].
 
 pred remove_duplicates i:list term, o:list term.
 remove_duplicates [] [].

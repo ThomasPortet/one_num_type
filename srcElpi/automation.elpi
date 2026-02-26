@@ -39,8 +39,10 @@ all_vars T L0 [T|L0]  :-
 
 all_vars _ L L.
 
-func is_var term.
-is_var (global (const _)).
+pred is_var term.
+is_var (global (const _) as T) :- 
+has_type_R T
+.
 
 
 pred sub_ringable_vars i:term i:list term i:list term o:list term.

@@ -42,15 +42,12 @@ Elpi Accumulate lp:{{
     sub_ringable_r T2 L1 L2,
     remove_duplicates L2 L,
     terms_to_trms L TL, !,
-    sayLT L,
     std.length L N,
     std.any->string N SN,
     std.string.concat  "" ["r", SN] S,
-    coq.say "super_ring tried",
-    coq.ltac.call S TL G  GL,
+    coq.ltac.call S TL G  GL
     % coq.ltac.call "xx" TL G  GL,
     % coq.ltac.call-ltac1 "xx" (goal C R T E [trm {{(0+0)}}, trm {{0}}]) GL,
-    coq.say "super_ring succeeded"
     .
 
     solve _ _ :-
@@ -83,7 +80,7 @@ Elpi Accumulate lp:{{
 
 Ltac super_ring_i vars := (elpi super_ring_i (vars)).
 Ltac super_ring_iterator vars := 
-repeat (progress(super_ring_i vars);try reflexivity); try reflexivity.
+repeat (progress(super_ring_i vars)); try reflexivity.
 Elpi Tactic super_ring_iterate.
 Elpi Accumulate File automation.
 Elpi Accumulate File tools.
@@ -169,30 +166,8 @@ lra.
 Qed.
 End Test.
 
-Elpi Tactic super_ring_i .
-Elpi Accumulate File automation.
-Elpi Accumulate File tools.
-Elpi Accumulate lp:{{
 
-    solve (goal _ _ {{lp:T1 = lp:T2}} _ [trm TL'] as G)  GL :-
-    term_to_list TL' L',
-    sub_ringable_r T1 L' L1,
-    sub_ringable_r T2 L1 L2,
-    remove_duplicates L2 L,
-    terms_to_trms L TL, !,
-    std.length L N,
-    std.any->string N SN,
-    std.string.concat  "" ["r", SN] S,
-    coq.ltac.call S TL G  GL
-    .
-
-    solve _ _ :-
-    coq.ltac.fail _ "problem super_ring_i".
-
-}}.
-
-
-Tactic Notation "super_field" :=
+Ltac super_field :=
   elpi super_field.
 Elpi Tactic super_field.
 Elpi Accumulate File automation.
@@ -236,14 +211,38 @@ solve _ _ :-
 
 }}.
 
+Elpi Tactic field_progress.
+Elpi Accumulate lp:{{
+func same_goal_seal_not_seal goal, sealed-goal ->.
+same_goal_seal_not_seal (goal _ _ G _ _) (seal (goal _ _ G _ _)).
+
+solve G [G'|Gs] :-
+  coq.ltac.call-ltac1 "super_field" G [G'|Gs],
+  not (same_goal_seal_not_seal G G'), !
+.
+
+solve G [(seal G)].
+
+solve _ _ :-
+  coq.ltac.fail _ "problem field_progress".
+}}.
+
+Section Test.
+  Variable x : R.
+Goal (x+0)/2^(x+0) = x/2^x.
+elpi field_progress.
+elpi field_progress.
+elpi field_progress.
+reflexivity.
+Admitted.
 
 
-
+End Test.
 Ltac add_ge0s := elpi add_ge0s.
 
 (* TODO : we need to iterate on super_field ; but super_field may create additional goals, so progress doesn't work. We need to verify that the first goal does progress *)
 Ltac super_field' :=
-super_field ;  try reflexivity ; (add_ge0s ; try lra) .
+repeat (progress ( elpi field_progress) ;  try reflexivity ; (add_ge0s ; try lra)) .
 
 Ltac lra' :=
 add_ge0s; lra .
@@ -276,7 +275,7 @@ End Test.
 Ltac super :=
   repeat progress (
       super_ring
-   || (super_field)
+   || (super_field')
    || add_ge0s
    || lra
   );

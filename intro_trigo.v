@@ -1,5 +1,5 @@
 From Stdlib Require Import Reals ZArith Lra.
-From OneNum Require Import R_subsets rec_def R_compute anti_unif automation.
+From OneNum Require Import R_subsets rec_def R_compute automation.
 From elpi Require Import elpi.
 
 Open Scope R_scope.
@@ -20,7 +20,7 @@ Ltac calc_LHS' F :=
   match goal with
   | |- ?L = _ =>
     let name := fresh "temp_for_calc_LHS" in
-     assert (name: L = F);[solve [easy |super_ring' |super_field' |lra' ]| apply (eq_trans name); clear name]
+     assert (name: L = F);[solve [easy |super_field' |lra' |super_ring' ]| apply (eq_trans name); clear name]
   end.
 
 
@@ -1410,7 +1410,6 @@ calc_LHS (cos (Pi / (2 ^ (n + 2) * 2))).
 
   now rewrite Rpow_succ; [ | solve_Rnat].
 calc_LHS' (cos ((Pi / (2 ^ (n + 2)) / 2))).
-  (* super_field'. *)
 calc_LHS (sqrt (2 + 2 * cos (Pi / 2 ^ (n + 2))) / 2).
   rewrite cos_half_formula.
     easy.
@@ -1428,7 +1427,7 @@ calc_LHS (sqrt (2 + 2 * cos (Pi / 2 ^ (n + 2))) / 2).
 calc_LHS (sqrt (2 + 2 * (Viete_aux n / 2)) / 2).
   now rewrite IHRnat.
 calc_LHS' (sqrt (2 + Viete_aux n) / 2).
-  (* super_field'. *)
+  super_field'. 
 calc_LHS (Viete_aux (n + 1) / 2).
 rewrite (proj2 Viete_aux_eqn (n + 1)).
     super_ring'.
@@ -1569,6 +1568,7 @@ induction nnat as [ | n nnat Ihn].
     replace (0 + 1) with 1 by ring.
     rewrite prod0; lra.
   calc_LHS' (1 / \prod_(1 <= i < 1) cos (Pi / 2 ^ (i + 1))).
+
   rewrite prod0; field.
 replace (n + 1 + 1) with (n + 2) by ring.
 assert (prod_step : \prod_(1 <= i < (n + 2)) cos (Pi / 2 ^ (i + 1)) =
