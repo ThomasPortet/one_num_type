@@ -20,7 +20,7 @@ Ltac calc_LHS' F :=
   match goal with
   | |- ?L = _ =>
     let name := fresh "temp_for_calc_LHS" in
-     assert (name: L = F);[solve [easy |super_field' |lra' |super_ring' ]| apply (eq_trans name); clear name]
+     assert (name: L = F);[solve [easy |lra' | super_ring'|super_field' |lra'  ]| apply (eq_trans name); clear name]
   end.
 
 
@@ -236,8 +236,9 @@ assert (step : c / a - b ^ 2 / (4 * a ^ 2)= - ( b ^ 2 - 4 * a * c) / (4 * a ^ 2)
 assert ((x + b / (2 * a)) ^ 2 =
         (b * b - 4 * a * c) / (4 * a ^ 2)).
   start_with ((x + b /  (2 * a)) ^ 2).
-  calc_LHS' ((x + b / (2 * a)) ^ 2 + (c / a - b ^ 2 / (4 * a ^ 2)) -
+  Timeout 5 calc_LHS' ((x + b / (2 * a)) ^ 2 + (c / a - b ^ 2 / (4 * a ^ 2)) -
     (c / a - b ^ 2 / (4 * a ^ 2))).
+    
   replace ((x + b / (2 * a)) ^ 2 + (c / a - b ^2 / (4 * a ^2))) with 0; cycle 1.
     symmetry.
     replace ((x + b / (2 * a)) ^ 2 + (c / a - b ^ 2 / (4 * a ^ 2))) with
@@ -1143,6 +1144,7 @@ apply div_le_1.
   easy.
 lra.
 Qed.
+
 
 Lemma phase_and_amplitude a b : (a, b) <> (0, 0) ->
   exists rho phi, forall theta, 

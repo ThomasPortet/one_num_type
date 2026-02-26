@@ -178,15 +178,22 @@ pred sayLA i:list argument.
 sayLA nil :- coq.say "nil".
 sayLA [trm A|Tl] :- std.do![coq.say {coq.term->string A}, coq.say "::", sayLA Tl].
 
-pred remove_duplicates i:list term, o:list term.
+func remove_duplicates list term -> list term.
 remove_duplicates [] [].
 
-remove_duplicates [T | Ts] L1 :-
-    std.mem! Ts T,
-    remove_duplicates Ts L1.
+remove_duplicates [T | Ts] [T|Ts''] :-
+    remove T Ts Ts',
+    remove_duplicates Ts' Ts''
+    .
 
-remove_duplicates [T | Ts] [T | L1] :-
-    remove_duplicates Ts L1.
+func remove term, list term -> list term.
+
+remove _ [] [].
+remove T [T |L] L' :-
+remove T L L',!.
+
+remove T [T1 |L] [T1|L'] :-
+remove T L L'. 
 
 pred terms_to_trms i:list term, o:list argument.
 terms_to_trms nil nil.

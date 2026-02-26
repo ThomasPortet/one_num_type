@@ -41,8 +41,9 @@ all_vars _ L L.
 
 pred is_var term.
 is_var (global (const _) as T) :- 
-has_type_R T
-.
+has_type_R T.
+
+is_var T :- name T, has_type_R T.
 
 
 pred sub_ringable_vars i:term i:list term i:list term o:list term.
@@ -94,3 +95,8 @@ letifyge0s [triple St Prf X|Tl] (let Name St Prf Bo) :-
     term->string X N, coq.name-suffix `ge0` N Name,
     pi x \
     letifyge0s Tl (Bo x).
+
+func same_goal_seal_not_seal goal, sealed-goal ->.
+same_goal_seal_not_seal (goal _ _ G _ _) (seal (goal _ _ G _ _)).
+% same_goal_seat_not_seal (goal _ _ G ) (nabla X\ G') :-
+%  X c0, same_goal_seal_not_seal G

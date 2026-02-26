@@ -54,6 +54,7 @@ Elpi Accumulate lp:{{
     coq.ltac.fail _ "problem super_ring".
 
 }}.
+
 Elpi Tactic super_ring_i .
 Elpi Accumulate File automation.
 Elpi Accumulate File tools.
@@ -61,9 +62,14 @@ Elpi Accumulate lp:{{
 
     solve (goal _ _ {{lp:T1 = lp:T2}} _ [trm TL'] as G)  GL :-
     term_to_list TL' L',
-    sub_ringable_r T1 L' L1,
+    coq.say "L' :",
+    sayLT L',
+    sub_ringable_r T1 [] L1,
     sub_ringable_r T2 L1 L2,
-    remove_duplicates L2 L,
+    std.append L' L2 L3,
+    remove_duplicates L3 L,
+    coq.say "L :",
+    sayLT L,
     terms_to_trms L TL, !,
     std.length L N,
     std.any->string N SN,
@@ -77,22 +83,33 @@ Elpi Accumulate lp:{{
     coq.ltac.fail _ "problem super_ring_i".
 
 }}.
-
+(* parentheses around vars as argument of super_ring_i are needed because
+of a quirk of elpi tactics 
+*)
 Ltac super_ring_i vars := (elpi super_ring_i (vars)).
 Ltac super_ring_iterator vars := 
-repeat (progress(super_ring_i vars)); try reflexivity.
+repeat (try reflexivity; progress(super_ring_i vars)).
+
 Elpi Tactic super_ring_iterate.
 Elpi Accumulate File automation.
 Elpi Accumulate File tools.
 Elpi Accumulate lp:{{
 
     solve (goal _Ctx _ {{lp:T1 = lp:T2}} _  _ as G ) GL :-
+        coq.say "before",
+    say T1,
     all_vars T1 [] L1',
+        coq.say "before1",
+    coq.say "L1'", sayLT L1',
     all_vars T2 L1' L2',
     remove_duplicates L2' L',
+    sayLT L',
     !,
     list_to_real L' TL,
+    coq.say "before2",
     coq.ltac.call "super_ring_iterator" [trm TL] G GL
+    ,
+    coq.say "after"
     .
 
     solve _ _ :-
@@ -100,15 +117,52 @@ Elpi Accumulate lp:{{
 
 }}.
 
-Ltac super_ring' := elpi super_ring_iterate.
+
+Elpi Tactic test_all_vars.
+Elpi Accumulate File automation.
+Elpi Accumulate File tools.
+Elpi Accumulate lp:{{
+
+    solve (goal _Ctx _ {{lp:T1 = lp:T2}} _  _ as G ) [seal G] :-
+    coq.say T1,
+    all_vars T1 [] L1',
+    coq.say "L1'", coq.say L1',
+    all_vars T2 L1' L2',
+    remove_duplicates L2' L',
+    coq.say L',
+    !
+
+    .
+
+    solve _ _ :-
+    coq.ltac.fail _ "problem test_all_vars".
+
+}}.
+
+Tactic Notation "super_ring'" := elpi super_ring_iterate.
 (* Goal cos (0+0) =cos 0.
 (* ring_simplify (0+0) (0). *)
 super_ring. *)
-
-
-Section Test.
+(* Section Test.
 Variable x y z t: R.
+Elpi Query lp:{{
+ T = {{ cos ( x+ y)+ z + x +3 }},
+all_vars T [] L,
+sayLT L
+}}. *)
+Section Test.
+Variable x y z t a b psi: R.
+Let rho := sqrt (a ^ 2 + b ^ 2) .
+Goal True.
 
+  
+  Elpi Query lp:{{
+    T = {{(rho * sin psi) ^ 2 = rho ^ 2 * sin psi ^ 2}},
+
+    all_vars T [] L
+  }}.
+
+easy. Qed.
 Elpi Query lp:{{
  T = {{ cos ( x+ y)}},
 collect [{{Rplus}}] []T [] L1,
@@ -126,6 +180,7 @@ Goal cos (x + 1 + 2) = cos (x + 2 + 1).
  super_ring.
  easy.
 Qed.
+
 
 Goal  x+cos (y +sin t) = cos (sin (t+0) + y +0)+x.
 super_ring.
@@ -212,16 +267,12 @@ solve _ _ :-
 }}.
 
 Elpi Tactic field_progress.
+Elpi Accumulate File automation.
 Elpi Accumulate lp:{{
-func same_goal_seal_not_seal goal, sealed-goal ->.
-same_goal_seal_not_seal (goal _ _ G _ _) (seal (goal _ _ G _ _)).
-
 solve G [G'|Gs] :-
   coq.ltac.call-ltac1 "super_field" G [G'|Gs],
   not (same_goal_seal_not_seal G G'), !
 .
-
-solve G [(seal G)].
 
 solve _ _ :-
   coq.ltac.fail _ "problem field_progress".
@@ -231,8 +282,9 @@ Section Test.
   Variable x : R.
 Goal (x+0)/2^(x+0) = x/2^x.
 elpi field_progress.
-elpi field_progress.
-elpi field_progress.
+super_field.
+(* elpi field_progress.
+elpi field_progress. *)
 reflexivity.
 Admitted.
 
@@ -242,7 +294,7 @@ Ltac add_ge0s := elpi add_ge0s.
 
 (* TODO : we need to iterate on super_field ; but super_field may create additional goals, so progress doesn't work. We need to verify that the first goal does progress *)
 Ltac super_field' :=
-repeat (progress ( elpi field_progress) ;  try reflexivity ; (add_ge0s ; try lra)) .
+repeat (progress (elpi field_progress) ;  try reflexivity ; (add_ge0s ; try lra)) .
 
 Ltac lra' :=
 add_ge0s; lra .
