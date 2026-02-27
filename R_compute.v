@@ -175,7 +175,7 @@ Elpi Accumulate Db R_compute.db.
 
 
 Elpi Accumulate lp:{{
-pred translate_prf i:term, o:term, o:term.
+pred translate_prf term -> term, term.
 main [trm E] :-
 std.do! [
   translate_prf E E1 _,
@@ -198,7 +198,7 @@ main _ :- coq.say "error R_compute".
 }}.
 Elpi Accumulate  File compute.
 Elpi Accumulate File tools.
-Elpi Accumulate File gen.
+
 Elpi Accumulate File translate_prf.
 Elpi Export R_compute.
 
@@ -226,8 +226,8 @@ Elpi Export add_computation.
 
 Elpi Command mirror_recursive_definition.
 Elpi Accumulate Db R_compute.db.
-Elpi Accumulate Db R_translate.db.
-Elpi Accumulate File gen.
+Elpi Accumulate Db R_translate.db. 
+
 Elpi Accumulate lp:{{ }}.
 
 Ltac r_compute_rewrite P := rewrite P.
