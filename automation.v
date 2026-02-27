@@ -62,14 +62,10 @@ Elpi Accumulate lp:{{
 
     solve (goal _ _ {{lp:T1 = lp:T2}} _ [trm TL'] as G)  GL :-
     term_to_list TL' L',
-    coq.say "L' :",
-    sayLT L',
     sub_ringable_r T1 [] L1,
     sub_ringable_r T2 L1 L2,
     std.append L' L2 L3,
     remove_duplicates L3 L,
-    coq.say "L :",
-    sayLT L,
     terms_to_trms L TL, !,
     std.length L N,
     std.any->string N SN,
@@ -96,21 +92,11 @@ Elpi Accumulate File tools.
 Elpi Accumulate lp:{{
 
     solve (goal _Ctx _ {{lp:T1 = lp:T2}} _  _ as G ) GL :-
-        coq.say "before",
-    say T1,
     all_vars T1 [] L1',
-        coq.say "before1",
-    coq.say "L1'", sayLT L1',
     all_vars T2 L1' L2',
-    remove_duplicates L2' L',
-    sayLT L',
-    !,
+    remove_duplicates L2' L',!,
     list_to_real L' TL,
-    coq.say "before2",
-    coq.ltac.call "super_ring_iterator" [trm TL] G GL
-    ,
-    coq.say "after"
-    .
+    coq.ltac.call "super_ring_iterator" [trm TL] G GL.
 
     solve _ _ :-
     coq.ltac.fail _ "problem super_ring_iterate".
@@ -279,20 +265,25 @@ solve _ _ :-
 }}.
 
 Section Test.
-  Variable x : R.
+  Variable x y: R.
 Goal (x+0)/2^(x+0) = x/2^x.
 elpi field_progress.
 super_field.
-(* elpi field_progress.
-elpi field_progress. *)
-reflexivity.
+Fail elpi field_progress.
+
 Admitted.
 
+Goal forall x y, (x+y)/x = (y+x)/x.
+intros.
+
+elpi field_progress.
+Fail elpi field_progress.
+Admitted.
 
 End Test.
 Ltac add_ge0s := elpi add_ge0s.
 
-(* TODO : we need to iterate on super_field ; but super_field may create additional goals, so progress doesn't work. We need to verify that the first goal does progress *)
+
 Ltac super_field' :=
 repeat (progress (elpi field_progress) ;  try reflexivity ; (add_ge0s ; try lra)) .
 

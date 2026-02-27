@@ -709,8 +709,8 @@ Qed.
 Lemma sin_Pi : sin Pi = 0.
 Proof.
 start_with (sin Pi).
-calc_LHS (sin (Pi / 2 + Pi / 2)).
-  do 2 super_field ; reflexivity. (* TODO repeat super_field*)
+calc_LHS' (sin (Pi / 2 + Pi / 2)).
+  (* do 2 super_field ; reflexivity. *)
 calc_LHS (cos (Pi / 2) * sin (Pi / 2) + cos (Pi / 2) * sin (Pi / 2)).
   now rewrite sin_add.
 calc_LHS (0 * sin (Pi / 2) + 0 * sin (Pi / 2)).
@@ -721,8 +721,8 @@ Qed.
 Lemma cos_Pi : cos Pi = -1.
 Proof.
 start_with (cos Pi).
-calc_LHS (cos (Pi / 2 + Pi / 2)).
-  do 2 super_field ; reflexivity. (* TODO repeat super_field*)
+calc_LHS' (cos (Pi / 2 + Pi / 2)).
+  (* do 2 super_field ; reflexivity.  *)
 calc_LHS (cos (Pi / 2) * cos (Pi / 2) - sin (Pi / 2) * sin (Pi / 2)).
   now rewrite cos_add.
 calc_LHS (0 - sin (Pi / 2) * sin (Pi / 2)).

@@ -96,7 +96,18 @@ letifyge0s [triple St Prf X|Tl] (let Name St Prf Bo) :-
     pi x \
     letifyge0s Tl (Bo x).
 
-func same_goal_seal_not_seal goal, sealed-goal ->.
+pred same_goal_seal_not_seal goal, sealed-goal ->.
+
 same_goal_seal_not_seal (goal _ _ G _ _) (seal (goal _ _ G _ _)).
-% same_goal_seat_not_seal (goal _ _ G ) (nabla X\ G') :-
-%  X c0, same_goal_seal_not_seal G
+
+same_goal_seal_not_seal ((goal Ctx _ T _ _) as G) (nabla _ as G') :-
+    std.rev Ctx CtxL,
+    ctx_nabla CtxL G' T1, !,
+    (not (not(T = T1))).
+
+func ctx_nabla  goal-ctx, sealed-goal -> term.
+ctx_nabla [decl X _Name _Type | Ctx'] (nabla F) T :-
+    ctx_nabla Ctx' (F X) T.
+ctx_nabla [def X _Name _Type _Bo | Ctx'] (nabla F) T :-
+    ctx_nabla Ctx' (F X) T.
+ctx_nabla [] (seal (goal _ _ T _ _)) T.
