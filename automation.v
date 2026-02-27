@@ -1,5 +1,5 @@
 From elpi Require Import elpi.
-From Stdlib Require Import Reals Lra Ring List.
+From Stdlib Require Import Reals Lra.
 From OneNum Require Import R_subsets rec_def ring_simplify_bank field_simplify_bank.
 
 From OneNum.srcElpi Extra Dependency "tools.elpi" as tools.
