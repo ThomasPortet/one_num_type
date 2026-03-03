@@ -166,13 +166,10 @@ Elpi Db R_compute.db lp:{{
 Elpi Accumulate R_compute.db File compute.
 Elpi Accumulate R_compute.db File gen.
 
-
-
 Elpi Command R_compute.
 Elpi Accumulate R_translate.db File gen.
 
 Elpi Accumulate Db R_compute.db.
-
 
 Elpi Accumulate lp:{{
 pred translate_prf term -> term, term.
@@ -226,15 +223,13 @@ Elpi Export add_computation.
 
 Elpi Command mirror_recursive_definition.
 Elpi Accumulate Db R_compute.db.
-Elpi Accumulate Db R_translate.db. 
-
-Elpi Accumulate lp:{{ }}.
+Elpi Accumulate File tools translate_prf. 
 
 Ltac r_compute_rewrite P := rewrite P.
 
 Elpi Tactic r_compute.
 Elpi Accumulate Db R_compute.db.
-Elpi Accumulate Db R_translate.db.
+Elpi Accumulate File translate_prf. 
 Elpi Accumulate lp:{{
 
 solve (goal _ _ _ _ [trm X] as G) GL :-
@@ -254,7 +249,7 @@ solve A B :-
 
 Elpi Tactic r_compute_if_possible.
 Elpi Accumulate Db R_compute.db.
-Elpi Accumulate Db R_translate.db.
+Elpi Accumulate File tools translate_prf. 
 
 Elpi Accumulate lp:{{
 

@@ -1,11 +1,11 @@
-pred add_last_list term, term -> term.
+func add_last_list term, term -> term.
 
 add_last_list {{nil}} X {{lp:X::nil}} :- !.
 
-add_last_list {{@cons lp:_Ty lp:H lp:Tl}} X {{cons lp:H lp:L'}} :-
+add_last_list {{cons lp:H lp:Tl}} X {{cons lp:H lp:L'}} :-
   add_last_list Tl X L'.
 
-pred p1 int, term, term, term, term -> term.
+func p1 int, term, term, term, term -> term.
 
 p1 0 F G L1 L2 {{@MappR lp:M lp:F lp:L1 = IZR (@MappZ lp:M lp:G lp:L2)}} :-
   std.assert-ok! (coq.typecheck  F {{ty_ R lp:M}}) "wrong type for first function",!.
