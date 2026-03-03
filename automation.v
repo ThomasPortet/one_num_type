@@ -79,12 +79,12 @@ Elpi Accumulate lp:{{
     coq.ltac.fail _ "problem super_ring_i".
 
 }}.
+
 (* parentheses around vars as argument of super_ring_i are needed because
-of a quirk of elpi tactics 
-*)
-Ltac super_ring_i vars := (elpi super_ring_i (vars)).
+of a quirk of elpi tactics *)
+
 Ltac super_ring_iterator vars := 
-repeat (try reflexivity; progress(super_ring_i vars)).
+repeat (try reflexivity; progress(elpi super_ring_i (vars))).
 
 Elpi Tactic super_ring_iterate.
 Elpi Accumulate File automation.

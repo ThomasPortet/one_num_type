@@ -9,6 +9,11 @@ Ltac end_calculate :=
    match goal with | id : _ = _ |- _ => (rewrite id || rewrite <- id); clear id end;
    (easy || ring || (field; (easy || lra))).
 
+Ltac end_calculate' :=
+  repeat
+   match goal with | id : _ = _ |- _ => (rewrite id || rewrite <- id); clear id end;
+   (easy || super_ring' || (super_field'; (easy || lra))).
+
 Ltac calc_LHS F  :=
   match goal with
   | |- ?L = _ =>
@@ -545,10 +550,9 @@ split.
   easy.
 symmetry.
 start_with v.
-calc_LHS' (- (- v)).
 calc_LHS' (- g (c)).
 calc_LHS' (- - (f c)).
-ring.
+end_calculate'.
 Qed.
   
 Lemma cos_sub x y : cos (x - y) = cos x * cos y + sin x * sin y.
