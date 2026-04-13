@@ -1,0 +1,261 @@
+\documentclass[compress]{beamer}
+\usepackage[latin1]{inputenc}
+\usepackage{cancel}
+\usepackage{alltt}
+\newdimen\topcrop
+\topcrop=10cm  %alternatively 8cm if the pdf inclusions are in letter format
+\newdimen\topcropBezier
+\topcropBezier=19cm %alternatively 16cm if the inclusions are in letter format
+
+\setbeamertemplate{footline}[frame number]
+\title{A single number type for Math education\\in Type Theory}
+\author{Yves Bertot\\Thomas Portet}
+\date{April 2026}
+\mode<presentation>
+\begin{document}
+
+\maketitle
+\begin{frame}
+\frametitle{The context}
+\begin{itemize}
+\item Point of view: young students in mathematics have a single type of numbers in mind
+\item Type theory proposes a variety of type numbers
+\begin{itemize}
+\item Inductive types come with a builtin capability for computation
+\item Inductive types come with a direct notion of reasoning by induction
+\item Real numbers live a different part of the world
+\end{itemize}
+\item Experimenting with using only one type: real numbers
+\begin{itemize}
+\item Use subsets for natural numbers
+\item Recover recursive computation
+\item Make {\tt ring} and {\tt field} more comfortable
+\end{itemize}
+\end{itemize}
+\end{frame}
+\begin{frame}
+\frametitle{Plan}
+\begin{itemize}
+\item The subset of R that contains natural numbers
+\item Recursive computation with real numbers
+\item A poor man's calc tactic
+\item Deep ring and field tactics
+\item Showcase examples
+\begin{itemize}
+\item Trigonometry up to Viète's formula
+\item Fibonacci upto a closed formula
+\item Binomials as fractions of recursively defined factorials
+\end{itemize}
+\end{itemize}
+\end{frame}
+\begin{frame}
+\frametitle{Subsets instead of types}
+\begin{itemize}
+\item Avoid using the type {\tt nat}, but use the concept
+\item Natural numbers are definable as a subset, inductively
+\item Integers can also be defined inductively, but it is minor
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]
+\frametitle{Inductive predicate in Rocq}
+\begin{alltt}
+Require Import Reals.
+Open Scope R_scope.
+
+Inductive Rnat : R -> Prop :=
+  Rnat0 : Rnat 0
+| Rnat_succ : forall n, Rnat n -> Rnat (n + 1).
+\end{alltt}
+Generated induction principle:
+\begin{alltt}
+nat_ind
+     : forall P : R -> Prop,
+       P 0 ->
+       (forall n : R, Rnat n -> P n -> P (n + 1)) ->
+       forall r : R, Rnat r -> P r
+\end{alltt}
+\end{frame}
+\begin{frame}
+\frametitle{Ad hoc proofs of membership}
+\begin{itemize}
+\item When \(n, m \in {\mathbb N}\), \((n + m), (n \times m) \in {\mathbb N}\)
+\item Recover information normally given by typing
+\item When \(n, m \in {\mathbb N}\) and \(m \leq n\), \((n - m) \in {\mathbb N}\) can
+also be proved
+\begin{itemize}
+\item This requires an explicit proof
+\item Probably good in a training context for students
+\item Similar for division
+\end{itemize}
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]
+\frametitle{Computation}
+\begin{itemize}
+\item Notations are so that 12 (as a real number) is actually {\tt IZR 13}
+\item {\tt IZR~:~Z -> R} is a recursive function
+\item The interaction with {\tt Compute} is not pleasant
+\end{itemize}
+\begin{alltt}
+Compute 12.
+\textcolor{blue}{ = (R1 + R1) * ((R1 + R1) * (R1 + (R1 + R1)))
+     : R}
+\end{alltt}
+\begin{itemize}
+\item We designed a new command called {\tt R\_compute}.
+\end{itemize}
+\begin{alltt}
+R_compute (12 + 13).
+\textcolor{blue}{ = 25}
+\end{alltt}
+\begin{itemize}
+\item Does not cover \(\lambda\)-calculus or let-binders
+\item Works by using a database of registered functions
+\item Can produce a lemma stating the result as an equality
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]
+\frametitle{Recursive definitions, following the {\tt nat} recursive scheme}
+\begin{itemize}
+\item We provide a command that mimicks recursive definitions on {\tt Rnat}
+\item Only ``well-defined'' for elements of {\tt Rnat}
+\item The command produces two objects
+\begin{itemize}
+\item The function of type {\tt R -> R}
+\item The proof of the logical statement for that function
+\end{itemize}
+\end{itemize}
+\begin{small}
+\begin{verbatim}
+Recursive (def fib such that
+             fib 0 = 0 /\
+             fib 1 = 1 /\
+             forall n : R, Rnat (n - 2) ->
+                fib n = fib (n - 2) + fib (n - 1)).
+\end{verbatim}
+\end{small}
+Note: no pattern matching, but condition {\tt Rnat (n - 2)}
+\end{frame}
+\begin{frame}[fragile]
+\frametitle{Recursive definitions and {\tt R\_compute}}}
+\begin{itemize}
+\item When values produced by the function can be inferred to be in
+\(\mathbb Z\)
+\item The function can be added to the database for {\tt R\_compute}
+\item This requires defining a similar function of type {\tt Z -> Z}
+\end{itemize}
+\begin{small}
+\begin{alltt}
+Elpi mirror_recursive_definition fib.
+
+R_compute (fib 42).
+\textcolor{blue}{ = 267914296}
+\end{alltt}
+\end{small}
+\begin{itemize}
+\item The answer is instantaneous, because compilation uses memoisation
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]
+ \frametitle{Recursive definitions of functions with several arguments}
+\begin{itemize}
+\item Some functions take more than one argument such as bin :
+ \begin{small}
+\begin{verbatim}
+ Recursive (def bin such that 
+   bin 0 = (fun m : R => at_x 0 1 0 m) /\
+   forall n, Rnat (n - 1) ->
+   bin n = fun m : R => at_x 0 1 
+       (bin (n - 1) (m - 1) + bin (n - 1) m) m).
+\end{verbatim}
+ \end{small}
+
+ \item To handle functions with an arbitrary number of arguments, we introduce a \emph{new family of types}: \texttt{ty\_ T n}.
+ \begin{verbatim}
+ Fixpoint ty_ (T : Type) (n : nat) : Type := 
+    match n with
+    0 => T
+    |S p => (T -> ty_ T p)
+     end.
+\end{verbatim}
+ \end{itemize}
+\end{frame}
+\begin{frame}
+\frametitle{A poor man's {\tt calc} tactic}
+\begin{itemize}
+\item Lean has popularized a style of proofs called calculational
+\item Clever use of transitivity of equality and orders
+\item For our experiments, we only cover equality
+\item {\tt start\_with} \(formula\)
+\begin{itemize}
+\item Checks that the goal has the form \(F = G\)
+\item Checks that the \(formula\) and \(F\) are convertible
+\item Changes the goal into \(formula = G\)
+\end{itemize}
+\item {\tt calc\_LHS} \(formula\)
+\begin{itemize}
+\item Checks the goal has the form \(F = G\)
+\item Creates two new goals \(F = formula\) and \(formula = F\)
+\end{itemize}
+\item Should be read as \(... = formula\)
+\begin{itemize}
+\item The intent is to make proofs declarative (as in {\em waterproof})
+\item Each step after one instance of {\tt calc\_LHS} should be solved in an
+  easy step
+\end{itemize}
+\item {\tt end\_calculate} : checks that the intended equality is ``obvious''
+\end{itemize}
+\end{frame}
+\begin{frame}
+\frametitle{Supercharging {\tt ring} and {\tt field}}
+\begin{itemize}
+\item Tactics {\tt ring} and {\tt field} only work from the root
+\item Any application of an {\em unknown} function is treated as an atom
+\item Arguments are not modified by {\tt ring} or {\tt field}
+\item Example {\tt x + sqrt(x + 1) = sqrt (1 + x) + x} is not covered
+\item ring treats {\tt sqrt (x + 1)} and {\tt sqrt (1 + x)} as two different atoms
+\end{itemize}
+\end{frame}
+\begin{frame}
+\frametitle{A strategy that we propose}
+\begin{itemize}
+\item Use {\tt ring\_simplify} or {\tt field\_simplify}
+\begin{itemize}
+\item Normalize formulas given as argument, replace them
+\item Can handle several formulas at a time (with the same order)
+\end{itemize}
+\item normalize expressions under unknown functions
+\item repeat until stability
+\item On example: normalize {\tt (x + 1)}, {\tt 1 + x}, {\tt x + sqrt (1 + x)}
+and {\tt sqrt (1 + x) + x}
+\item This may yield {\tt x + sqrt (x + 1) = sqrt (x + 1) + x}
+\item Next normalization : {\tt x + sqrt (x + 1) = x + sqrt (x + 1)}
+\item We call the new tactics {\tt deep\_ring} and {\tt deep\_field}
+\item We also extend {\tt calc\_LHS} to include an attempt to solve with the
+  deep tactics
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]
+\frametitle{Example of proof made possible}
+\begin{alltt}
+Lemma cos_sub_Pi_half x : cos (x - Pi / 2) = sin x.
+Proof.
+start_with (cos (x - Pi / 2)).
+calc_LHS (cos x * cos (Pi / 2) + sin x * sin (Pi / 2)).
+  now rewrite cos_sub.
+calc_LHS (cos x * 0 + sin x * sin (Pi / 2)).
+  now rewrite cos_Pi_half.
+calc_LHS (cos x * 0 + sin x * 1).
+  now rewrite sin_Pi_half.
+end_calculate.
+Qed.
+\end{alltt}
+\end{frame}
+
+\end{document}
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 

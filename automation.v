@@ -25,13 +25,13 @@ match goal with |- 0%Z = f 0 => idtac end.
 Abort. 
 
 
-Tactic Notation "super_ring" :=
-  elpi super_ring.
-(* Ltac super_ring' :=
-repeat  (progress (super_ring ;try reflexivity)) ;  try reflexivity. *)
+Tactic Notation "deep_ring" :=
+  elpi deep_ring.
+(* Ltac deep_ring' :=
+repeat  (progress (deep_ring ;try reflexivity)) ;  try reflexivity. *)
 
 
-Elpi Tactic super_ring.
+Elpi Tactic deep_ring.
 Elpi Accumulate File automation.
 Elpi Accumulate File tools.
 
@@ -51,11 +51,11 @@ Elpi Accumulate lp:{{
     .
 
     solve _ _ :-
-    coq.ltac.fail _ "problem super_ring".
+    coq.ltac.fail _ "problem deep_ring".
 
 }}.
 
-Elpi Tactic super_ring_i .
+Elpi Tactic deep_ring_i .
 Elpi Accumulate File automation.
 Elpi Accumulate File tools.
 Elpi Accumulate lp:{{
@@ -76,17 +76,17 @@ Elpi Accumulate lp:{{
     .
 
     solve _ _ :-
-    coq.ltac.fail _ "problem super_ring_i".
+    coq.ltac.fail _ "problem deep_ring_i".
 
 }}.
 
-(* parentheses around vars as argument of super_ring_i are needed because
+(* parentheses around vars as argument of deep_ring_i are needed because
 of a quirk of elpi tactics *)
 
-Ltac super_ring_iterator vars := 
-repeat (try reflexivity; progress(elpi super_ring_i (vars))).
+Ltac deep_ring_iterator vars := 
+repeat (try reflexivity; progress(elpi deep_ring_i (vars))).
 
-Elpi Tactic super_ring_iterate.
+Elpi Tactic deep_ring_iterate.
 Elpi Accumulate File automation.
 Elpi Accumulate File tools.
 Elpi Accumulate lp:{{
@@ -96,10 +96,10 @@ Elpi Accumulate lp:{{
     all_vars T2 L1' L2',
     remove_duplicates L2' L',!,
     list_to_real L' TL,
-    coq.ltac.call "super_ring_iterator" [trm TL] G GL.
+    coq.ltac.call "deep_ring_iterator" [trm TL] G GL.
 
     solve _ _ :-
-    coq.ltac.fail _ "problem super_ring_iterate".
+    coq.ltac.fail _ "problem deep_ring_iterate".
 
 }}.
 
@@ -125,10 +125,10 @@ Elpi Accumulate lp:{{
 
 }}.
 
-Tactic Notation "super_ring'" := elpi super_ring_iterate.
+Tactic Notation "deep_ring'" := elpi deep_ring_iterate.
 (* Goal cos (0+0) =cos 0.
 (* ring_simplify (0+0) (0). *)
-super_ring. *)
+deep_ring. *)
 (* Section Test.
 Variable x y z t: R.
 Elpi Query lp:{{
@@ -158,59 +158,59 @@ sayL L1
 Goal forall x y, cos ( x+ y) = cos (y+ x).
 intros.
 (* ring_simplify (x+y) (y+x). *)
-super_ring.
+deep_ring.
 reflexivity.
 Qed.
 Goal cos (x + 1 + 2) = cos (x + 2 + 1).
 
- super_ring.
+ deep_ring.
  easy.
 Qed.
 
 
 Goal  x+cos (y +sin t) = cos (sin (t+0) + y +0)+x.
-super_ring.
-super_ring.
-super_ring.
-super_ring.
-super_ring'.
+deep_ring.
+deep_ring.
+deep_ring.
+deep_ring.
+deep_ring'.
 Qed.
 
 Goal  2 * sin (x+ cos(y)) + cos(y+x+0) = cos (x+y)+2* sin (cos (y)+x) .
-super_ring'.
+deep_ring'.
 Qed.
 
 Goal sin (x + 0) + 2*x - x = sin x + x.
-super_ring'.
+deep_ring'.
 Qed.
 Goal x + 3*x - 4*x = 0.
 
-super_ring'.
+deep_ring'.
 Qed.
 Goal (cos (x / 2 ^ (0 + 2))) = (cos (x / 4)).
-  super_ring'.
+  deep_ring'.
 Qed.
 
 Goal - y ^ 2 + x ^ 2  = - y ^ 2 + x ^ 2.
-super_ring.
-super_ring.
-super_ring.
-super_ring.
+deep_ring.
+deep_ring.
+deep_ring.
+deep_ring.
 reflexivity.
 Qed.
 Goal x ^ 2 = y ^ 2 -> x ^ 2 - y ^ 2 = 0.
 intros.
-super_ring.
-super_ring.
-super_ring.
+deep_ring.
+deep_ring.
+deep_ring.
 lra.
 Qed.
 End Test.
 
 
-Ltac super_field :=
-  elpi super_field.
-Elpi Tactic super_field.
+Ltac deep_field :=
+  elpi deep_field.
+Elpi Tactic deep_field.
 Elpi Accumulate File automation.
 Elpi Accumulate File tools.
 
@@ -229,7 +229,7 @@ solve (goal _Ctx _ {{lp:T1 = lp:T2}} _  _ as G ) GL :-
     .
 
 solve _ _ :-
-    coq.ltac.fail _ "problem super_field".
+    coq.ltac.fail _ "problem deep_field".
 
 }}.
 
@@ -256,7 +256,7 @@ Elpi Tactic field_progress.
 Elpi Accumulate File automation.
 Elpi Accumulate lp:{{
 solve G [G'|Gs] :-
-  coq.ltac.call-ltac1 "super_field" G [G'|Gs],
+  coq.ltac.call-ltac1 "deep_field" G [G'|Gs],
   not (same_goal_seal_not_seal G G'), !
 .
 
@@ -268,7 +268,7 @@ Section Test.
   Variable x y: R.
 Goal (x+0)/2^(x+0) = x/2^x.
 elpi field_progress.
-super_field.
+deep_field.
 Fail elpi field_progress.
 
 Admitted.
@@ -284,13 +284,59 @@ End Test.
 Ltac add_ge0s := elpi add_ge0s.
 
 
-Ltac super_field' :=
+Ltac deep_field' :=
 repeat (progress (elpi field_progress) ;  try reflexivity ; (add_ge0s ; try lra)) .
 
 Ltac lra' :=
 add_ge0s; lra .
 
+Ltac deep :=
+  repeat progress (
+      deep_ring
+   || (deep_field')
+   || add_ge0s
+   || lra
+  );
+  try reflexivity.
+  
+Conjecture toto : 3=4.
 
+Print toto.
+
+
+Ltac counterexample :=
+  intros;
+  match goal with
+  | |- ?lhs = ?rhs =>
+      let lhs' := eval compute in lhs in
+      let rhs' := eval compute in rhs in
+        ( lhs' rhs'
+        || fail "Counterexample:" lhs' "≠" rhs'
+        )
+  end.
+
+(* Lemma ybx : forall x, x+3=3+x.
+Proof.
+counterexample. *)
+
+Ltac counterexample_args :=
+  repeat match goal with
+  | |- forall x : ?T, _ =>
+      let x := fresh "x" in
+      intro x
+  end;
+  match goal with
+  | |- ?P -> False =>
+      let H := fresh "H" in
+      intro H;
+      change (~P) in H;
+      exact H
+  | |- ~?P => idtac
+  | _ => fail "Goal is not of the form forall ... , P -> False"
+  end.
+ Lemma z : forall x, (x+2=3+x)-> False.
+Proof.
+counterexample_args .
 From Ltac2 Require Import Ltac2.
 Ltac2 count_hyps () :=
   List.length (Control.hyps ()).
@@ -314,13 +360,4 @@ Ltac2 Eval (assert_hyps_eq 11).
 assumption.
 Qed.
 End Test.
-
-Ltac super :=
-  repeat progress (
-      super_ring
-   || (super_field')
-   || add_ge0s
-   || lra
-  );
-  try reflexivity.
 

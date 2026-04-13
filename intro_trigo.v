@@ -12,7 +12,7 @@ Ltac end_calculate :=
 Ltac end_calculate' :=
   repeat
    match goal with | id : _ = _ |- _ => (rewrite id || rewrite <- id); clear id end;
-   (easy || super_ring' || (super_field'; (easy || lra))).
+   (easy || deep_ring' || (deep_field'; (easy || lra)) || fail "end_calculate': unable to solve goal. Check algebraic structure or missing assumptions.").
 
 Ltac calc_LHS F  :=
   match goal with
@@ -25,7 +25,7 @@ Ltac calc_LHS' F :=
   match goal with
   | |- ?L = _ =>
     let name := fresh "temp_for_calc_LHS" in
-     assert (name: L = F);[solve [easy |lra' | super_ring'|super_field' |lra'  ]| apply (eq_trans name); clear name]
+     assert (name: L = F);[solve [easy |lra' | deep_ring'|deep_field' |lra'  ]| apply (eq_trans name); clear name]
   end.
 
 
@@ -714,7 +714,7 @@ Lemma sin_Pi : sin Pi = 0.
 Proof.
 start_with (sin Pi).
 calc_LHS' (sin (Pi / 2 + Pi / 2)).
-  (* do 2 super_field ; reflexivity. *)
+  (* do 2 deep_field ; reflexivity. *)
 calc_LHS (cos (Pi / 2) * sin (Pi / 2) + cos (Pi / 2) * sin (Pi / 2)).
   now rewrite sin_add.
 calc_LHS (0 * sin (Pi / 2) + 0 * sin (Pi / 2)).
@@ -726,7 +726,7 @@ Lemma cos_Pi : cos Pi = -1.
 Proof.
 start_with (cos Pi).
 calc_LHS' (cos (Pi / 2 + Pi / 2)).
-  (* do 2 super_field ; reflexivity.  *)
+  (* do 2 deep_field ; reflexivity.  *)
 calc_LHS (cos (Pi / 2) * cos (Pi / 2) - sin (Pi / 2) * sin (Pi / 2)).
   now rewrite cos_add.
 calc_LHS (0 - sin (Pi / 2) * sin (Pi / 2)).
@@ -1433,10 +1433,10 @@ calc_LHS (sqrt (2 + 2 * cos (Pi / 2 ^ (n + 2))) / 2).
 calc_LHS (sqrt (2 + 2 * (Viete_aux n / 2)) / 2).
   now rewrite IHRnat.
 calc_LHS' (sqrt (2 + Viete_aux n) / 2).
-  super_field'. 
+  deep_field'. 
 calc_LHS (Viete_aux (n + 1) / 2).
 rewrite (proj2 Viete_aux_eqn (n + 1)).
-    super_ring'.
+    deep_ring'.
   solve_Rnat.
 end_calculate.
 Qed.
@@ -1564,7 +1564,7 @@ assert (main : forall m, Rnat m ->
 induction nnat as [ | n nnat Ihn].
   start_with (sin (Pi / 2 ^ (0 + 1))).
   calc_LHS' (sin (Pi / 2)).
-  (* super_ring'. *)
+  (* deep_ring'. *)
   calc_LHS 1.
     now rewrite sin_Pi_half.
   symmetry.
@@ -1582,7 +1582,7 @@ assert (prod_step : \prod_(1 <= i < (n + 2)) cos (Pi / 2 ^ (i + 1)) =
      cos (Pi / 2 ^ (n + 2))).
   assert (0 <= n) by now apply Rnat_ge0.
   rewrite prod_recr;[ | solve_Rnat | lra ].
-  now super_ring'.
+  now deep_ring'.
 assert (2 < 2 ^ (n + 2)).
   replace 2 with (2 ^ 1) at 1 by ring. (* need a suitable theorem *)
   assert (0 <= n) by now apply Rnat_ge0.
